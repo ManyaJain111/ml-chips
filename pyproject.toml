@@ -1,0 +1,47 @@
+[project]
+name = "leakml"
+version = "0.1.0"
+description = "ML-driven PVT-variation-aware leakage estimation (Digital VLSI Design course project)"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "numpy>=1.26",
+    "pandas>=2.2",
+    "scipy>=1.13",
+    "scikit-learn>=1.5",
+    "lightgbm>=4.3", # GBDT model type. If XGBoost is wanted too, add `xgboost-cpu` (the plain
+                     # `xgboost` wheel drags in ~200 MB of CUDA/NCCL libraries on Linux)
+    "matplotlib>=3.8",
+    "pyyaml>=6.0",
+    "joblib>=1.4",
+    "tqdm>=4.66",
+    "tabulate>=0.9", # pandas.DataFrame.to_markdown for report tables
+]
+
+[dependency-groups]
+dev = ["pytest>=8.0", "ruff>=0.6", "ipykernel>=6.29"]
+# Optional: only if P2 decides to use a PyTorch MLP instead of sklearn's MLPRegressor.
+#   uv sync --group nn
+nn = ["torch>=2.3"]
+
+[tool.uv]
+default-groups = ["dev"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/leakml"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "NPY"]
+ignore = ["E501"] # `ruff format` enforces line length on code; long comments/docstrings are fine
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

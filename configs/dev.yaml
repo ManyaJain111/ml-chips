@@ -1,0 +1,64 @@
+# DEVELOPMENT config: runs the whole pipeline on the SYNTHETIC fixture model card, so everyone can
+# build and test their stage before / independently of the TA assignment and of each other.
+# Outputs go to *_dev* folders (gitignored). NOTHING produced with this config is a deliverable.
+#
+#   make bootstrap CONFIG=configs/dev.yaml QUICK=1   # ~1 min: pilot data, corners, stand-in models
+#
+# Everything except `assignment` and `paths` mirrors project.yaml. Keep them in sync.
+
+team:
+  name: dev
+
+assignment:
+  model_file: tests/fixtures/fixture_45nm.pm   # synthetic BSIM4 card, see its header
+  node: fixture_45nm
+  lmin: 45.0e-9
+  vdd_nominal: 1.0
+  test_circuit: cla3        # change to parity8 locally if that is your assignment
+
+simulator:
+  binary: ngspice
+  n_workers: 8
+  timeout_s: 60
+  work_dir: .spice_work
+  keep_failed: true
+
+seeds:
+  transistor_data: 1001
+  split: 42
+  training: 7
+  corners: 2026
+
+sampling:
+  n_samples_per_case: 2000
+  quick_n_samples: 500
+  vdd_tol: 0.10
+  temp_range_c: [-40.0, 125.0]
+  w_mult_range: [1.0, 8.0]
+  process_tol: 0.10
+  process_params: [vth0, toxe, ndep, u0, xj]
+
+split:
+  scheme: "70_15_15"
+
+ml:
+  model_types: [poly_ridge, random_forest, gbdt, mlp]
+  selection_metric: p95_err_pct
+  i_floor_a: 1.0e-15
+
+gates:
+  n_corners: 200
+  quick_n_corners: 10
+  sizing:
+    nmos_w_mult: 2.0
+    pmos_w_mult: 4.0
+  node_voltage_source: spice
+
+paths:
+  data: data/_dev
+  artifacts: artifacts/_dev
+  results: results/_dev
+  netlist_examples: results/_dev/netlists
+  pilot_data: data/_dev_pilot
+  pilot_artifacts: artifacts/_dev_pilot
+  pilot_results: results/_dev_pilot

@@ -1,0 +1,65 @@
+# Single source of truth for the team's assignment and every tunable knob.
+# Loaded by leakml.config.load_config(). Paths are relative to the repo root.
+# Fill in the TODO values with what the TAs assigned to the team.
+
+team:
+  name: TODO
+  members:
+    P1: TODO   # SPICE infrastructure + transistor datasets (Part A, step 1)
+    P2: TODO   # ML transistor models (Part A, step 2)
+    P3: TODO   # Gate-level validation (Part B)
+    P4: TODO   # Test circuit (Part C) + pipeline + report integration
+
+assignment:
+  model_file: pdk/TODO.pm   # e.g. pdk/22nm_HP.pm (one of 16nm_HP ... 45nm_MGK)
+  node: TODO                # e.g. 22nm_HP
+  lmin: 22.0e-9             # TODO: feature size of the node, in metres (L = Lmin for every FET)
+  vdd_nominal: 0.9          # TODO: 0.9 or 1.0 (V), as assigned
+  test_circuit: cla3        # TODO: "cla3" (3-bit carry-lookahead adder) or "parity8" (8-bit parity checker)
+
+simulator:
+  binary: ngspice
+  n_workers: 8              # parallel ngspice processes
+  timeout_s: 60             # per netlist
+  work_dir: .spice_work     # scratch dir for temporary netlists (gitignored)
+  keep_failed: true         # keep netlists that failed to converge, for debugging
+
+seeds:                      # every random draw in the project comes from one of these
+  transistor_data: 1001     # Part A sampling (each case derives its own child seed, see SPEC §3.4)
+  split: 42                 # train/val/test split
+  training: 7               # model init / bagging / MLP weights
+  corners: 2026             # the 200 PVT corners shared by Part B and Part C
+
+sampling:                   # SPEC §4.1
+  n_samples_per_case: 10000
+  quick_n_samples: 500      # used with --quick (pilot runs)
+  vdd_tol: 0.10             # VDD ~ U(vdd_nominal*(1-tol), vdd_nominal*(1+tol))
+  temp_range_c: [-40.0, 125.0]
+  w_mult_range: [1.0, 8.0]  # W ~ U(1, 8) * lmin
+  process_tol: 0.10         # each process param ~ U(nominal*(1-tol), nominal*(1+tol))
+  process_params: [vth0, toxe, ndep, u0, xj]
+
+split:
+  scheme: "70_15_15"        # or "80_10_10"
+
+ml:
+  model_types: [poly_ridge, random_forest, gbdt, mlp]   # the 4 model types compared (SPEC §4.5)
+  selection_metric: p95_err_pct                         # chosen on the VALIDATION set
+  i_floor_a: 1.0e-15        # |I| below this is excluded from relative-error metrics (SPEC §7)
+
+gates:
+  n_corners: 200
+  quick_n_corners: 10
+  sizing:                   # fixed W multipliers used for every FET in every gate / circuit
+    nmos_w_mult: 2.0        # must stay inside sampling.w_mult_range (else the models extrapolate)
+    pmos_w_mult: 4.0
+  node_voltage_source: spice   # "spice" (required by the brief) | "ml_solve" (stretch goal, SPEC §5.5)
+
+paths:
+  data: data
+  artifacts: artifacts
+  results: results
+  netlist_examples: netlists/examples
+  pilot_data: data/_pilot            # --quick runs write here instead (never overwrite deliverables)
+  pilot_artifacts: artifacts/_pilot
+  pilot_results: results/_pilot      # quick-mode example netlists go to results/_pilot/netlists

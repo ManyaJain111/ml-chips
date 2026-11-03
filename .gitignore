@@ -1,0 +1,28 @@
+# Python / uv
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# ngspice scratch (temporary netlists / raw files written by the runner)
+.spice_work/
+*.raw
+*.log
+
+# Pilot (--quick) and dev-config outputs: never deliverables
+data/_pilot/
+results/_pilot/
+artifacts/_pilot/
+data/_dev*/
+results/_dev*/
+artifacts/_dev*/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+
+# NOTE: data/, artifacts/ and results/ ARE tracked on purpose: they are deliverables.
+# If artifacts/models/*.joblib grow past ~50 MB, switch them to git-lfs instead of ignoring them.
