@@ -67,10 +67,10 @@ report/                the written report
 ## Ownership
 | Path | Owner |
 |---|---|
-| `pdk.py`, `sampling.py`, `spice/`, `data/`, `plotting.py`, scripts 01–03 | P1 |
-| `ml/`, `metrics.py`, scripts 04–05 | P2 |
-| `gates/`, scripts 06–09 | P3 |
-| `config.py`, `circuit/`, scripts 00 and 10–12, Makefile, Dockerfile, `report/` | P4 |
+| `pdk.py`, `sampling.py`, `spice/`, `data/`, `plotting.py`, scripts 01–03 | P1 (Manya) |
+| `ml/`, `metrics.py`, scripts 04–05 | P2 (Joanna) |
+| `gates/`, scripts 06–09 | P3 (Sindhuja) |
+| `config.py`, `circuit/`, scripts 00 and 10–12, Makefile, Dockerfile, `report/` | P4 (Gopal) |
 | `constants.py`, `io.py`, `cli.py`, SPEC.md, `scripts/dev_*` | shared, any change needs agreement |
 
 **Already implemented (the foundation):** everything other stages call into, i.e. config, io,

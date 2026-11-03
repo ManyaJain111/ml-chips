@@ -5,10 +5,10 @@
 team:
   name: TODO
   members:
-    P1: TODO   # SPICE infrastructure + transistor datasets (Part A, step 1)
-    P2: TODO   # ML transistor models (Part A, step 2)
-    P3: TODO   # Gate-level validation (Part B)
-    P4: TODO   # Test circuit (Part C) + pipeline + report integration
+    P1: Manya      # transistor data quality + data checks (Part A, step 1)
+    P2: Joanna     # ML transistor models (Part A, step 2)
+    P3: Sindhuja   # gate-level validation (Part B)
+    P4: Gopal      # test circuit (Part C) + pipeline + report integration
 
 assignment:
   model_file: pdk/TODO.pm   # e.g. pdk/22nm_HP.pm (one of 16nm_HP ... 45nm_MGK)

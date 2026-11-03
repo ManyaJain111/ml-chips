@@ -1,14 +1,14 @@
 # TODO: work split (4 people)
 
-Names go in `configs/project.yaml → team.members`. Tick boxes as you go. Contracts are in
+Team: Manya (P1), Joanna (P2), Sindhuja (P3), Gopal (P4), also in `configs/project.yaml → team.members`. Tick boxes as you go. Contracts are in
 [SPEC.md](SPEC.md), conventions in [AGENTS.md](AGENTS.md).
 
 | Person | Area | Owns | Deliverables |
 |---|---|---|---|
-| **P1** | Transistor data quality + data checks (Part A.1) | `data/checks.py`, scripts 01–03, maintains `pdk.py`, `sampling.py`, `spice/`, `data/generate.py`, `plotting.py` | D1, D2 (FET), D3 |
-| **P2** | ML transistor models (Part A.2) | `ml/*`, `metrics.py`, scripts 04–05 | D4, D5 |
-| **P3** | Gate-level validation (Part B) | `gates/*`, scripts 06–09 | D2 (gates), D6, D7 |
-| **P4** | Test circuit (Part C) + pipeline + report | `config.py`, `circuit/*`, scripts 00, 10–12, Makefile/Docker, `report/` | D2 (circuit), D8, D9, D10 |
+| **P1** Manya | Transistor data quality + data checks (Part A.1) | `data/checks.py`, scripts 01–03, maintains `pdk.py`, `sampling.py`, `spice/`, `data/generate.py`, `plotting.py` | D1, D2 (FET), D3 |
+| **P2** Joanna | ML transistor models (Part A.2) | `ml/*`, `metrics.py`, scripts 04–05 | D4, D5 |
+| **P3** Sindhuja | Gate-level validation (Part B) | `gates/*`, scripts 06–09 | D2 (gates), D6, D7 |
+| **P4** Gopal | Test circuit (Part C) + pipeline + report | `config.py`, `circuit/*`, scripts 00, 10–12, Makefile/Docker, `report/` | D2 (circuit), D8, D9, D10 |
 
 ---
 
@@ -39,10 +39,10 @@ this works before the TA assignment is filled in. Run everything with
 
 | Person | Needs | Use now (stand-in) | Real one arrives when |
 |---|---|---|---|
-| P1 | assigned model card | fixture card (`configs/dev.yaml`) | TAs give the file → `pdk/` |
-| P2 | transistor datasets | `make data CONFIG=configs/dev.yaml [QUICK=1]` (500 or 2000 rows) | P1 runs step 02 on `project.yaml` |
-| P3 | corners, transistor models | dev corners + stand-in models (bootstrap) | P2 ships `artifacts/models/*.joblib` |
-| P4 | corners, gate subckts, gate-ML table | dev corners, `render_gate_subckt`, placeholder `gate_ml.csv` | P3 ships `data/gates/gate_ml.csv` |
+| P1 Manya | assigned model card | fixture card (`configs/dev.yaml`) | TAs give the file → `pdk/` |
+| P2 Joanna | transistor datasets | `make data CONFIG=configs/dev.yaml [QUICK=1]` (500 or 2000 rows) | P1 runs step 02 on `project.yaml` |
+| P3 Sindhuja | corners, transistor models | dev corners + stand-in models (bootstrap) | P2 ships `artifacts/models/*.joblib` |
+| P4 Gopal | corners, gate subckts, gate-ML table | dev corners, `render_gate_subckt`, placeholder `gate_ml.csv` | P3 ships `data/gates/gate_ml.csv` |
 
 The interfaces between the stages are fixed and tested (SPEC §4.6, §5.4, §6.3). Swapping a
 stand-in for the real thing means **re-running a script, not changing code**.
@@ -82,7 +82,7 @@ stand-in for the real thing means **re-running a script, not changing code**.
 
 ---
 
-## P1: transistor data quality + data checks
+## P1 (Manya): transistor data quality + data checks
 
 The generator already works. P1's job is to make the data **correct, sufficient and defended**.
 
@@ -110,7 +110,7 @@ The generator already works. P1's job is to make the data **correct, sufficient 
 
 ---
 
-## P2: ML transistor models
+## P2 (Joanna): ML transistor models
 
 `metrics.py` and the predictor API are done. Start on dev data now:
 `make data CONFIG=configs/dev.yaml` (2000 rows/case, about 1 min) or the QUICK=1 pilot.
@@ -128,7 +128,7 @@ The generator already works. P1's job is to make the data **correct, sufficient 
 
 ---
 
-## P3: gate-level validation (Part B)
+## P3 (Sindhuja): gate-level validation (Part B)
 
 Topology, subckts, corners and the P4 lookup are done. `tests/test_spice.py::test_gate_subckt_logic`
 is a working hand-built gate deck to start from.
@@ -152,7 +152,7 @@ is a working hand-built gate deck to start from.
 
 ---
 
-## P4: test circuit (Part C) + pipeline + report
+## P4 (Gopal): test circuit (Part C) + pipeline + report
 
 Config, env check, Makefile and Docker are done. Develop with dev corners + the placeholder `gate_ml.csv`.
 
@@ -177,10 +177,10 @@ Config, env check, Makefile and Docker are done. Develop with dev corners + the 
 ## Review pairs (every PR needs one approval)
 | Author | Reviewer | Why |
 |---|---|---|
-| P1 | P3 | P3 is the next heaviest SPICE user |
-| P2 | P1 | P1 knows the data and its sign conventions |
-| P3 | P2 | the ML gate code consumes P2's API |
-| P4 | P3 | the circuit reuses P3's subckts/topology |
+| P1 Manya | P3 Sindhuja | P3 is the next heaviest SPICE user |
+| P2 Joanna | P1 Manya | P1 knows the data and its sign conventions |
+| P3 Sindhuja | P2 Joanna | the ML gate code consumes P2's API |
+| P4 Gopal | P3 Sindhuja | the circuit reuses P3's subckts/topology |
 
 ## Shared / anyone
 - [ ] Confirm with the TAs: leakage definition (SPEC §3.5), fixed gate sizing (§5.2), the accuracy definition (§7), ngspice as the simulator
