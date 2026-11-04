@@ -1,0 +1,23 @@
+{
+  "model_file": "/home/manya/ml-chips/pdk/32nm_LP.pm",
+  "model_names": {
+    "nmos": "nmos",
+    "pmos": "pmos"
+  },
+  "nominal": {
+    "nmos": {
+      "vth0": 0.63,
+      "toxe": 1.6e-09,
+      "ndep": 4.12e+18,
+      "u0": 0.042,
+      "xj": 5e-08
+    },
+    "pmos": {
+      "vth0": -0.5808,
+      "toxe": 1.62e-09,
+      "ndep": 3.07e+18,
+      "u0": 0.016,
+      "xj": 1e-08
+    }
+  }
+}

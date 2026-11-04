@@ -70,8 +70,8 @@ stand-in for the real thing means **re-running a script, not changing code**.
 
 ## Milestones
 - [ ] **M0: Setup (day 1, everyone)**
-  - [ ] Fill `configs/project.yaml` with the TA assignment (model file, node, Lmin, VDD, test circuit, names)
-  - [ ] Put the assigned PTM file in `pdk/`, then `make check` (writes `artifacts/env.json`)
+  - [x] Fill `configs/project.yaml` with the TA assignment (model file, node, Lmin, VDD, test circuit, names)
+  - [x] Put the assigned PTM file in `pdk/`, then `make check` (writes `artifacts/env.json`)
   - [ ] Everyone runs the Day 1 commands above
   - [ ] Agree on the git workflow (branch per person, PRs, reviewer pairs below)
 - [ ] **M1: Every stage runs end-to-end on dev/stand-in inputs (end of week 1)**
@@ -87,16 +87,16 @@ stand-in for the real thing means **re-running a script, not changing code**.
 The generator already works. P1's job is to make the data **correct, sufficient and defended**.
 
 ### Data check (D3)
-- [ ] `data/checks.py`: `kirchhoff_residual`, `kirchhoff_table` → `results/tables/kirchhoff.{csv,md}`
-- [ ] the 3 trend plots (`plotting.trend_scatter` exists): Ioff vs T, Ioff vs vth0, Ig vs toxe
-- [ ] `scripts/03_data_check.py`
-- [ ] With the dev data: check the plots show the expected physics (Ioff grows ~exponentially with T and falls with vth0; Ig falls steeply with toxe)
+- [x] `data/checks.py`: `kirchhoff_residual`, `kirchhoff_table` → `results/tables/kirchhoff.{csv,md}`
+- [x] the 3 trend plots (`plotting.trend_scatter` exists): Ioff vs T, Ioff vs vth0, Ig vs toxe
+- [x] `scripts/03_data_check.py`
+- [x] With the dev data: check the plots show the expected physics (Ioff grows ~exponentially with T and falls with vth0; Ig falls steeply with toxe)
 
 ### Real datasets (D1, D2-FET)
-- [ ] When the assigned card arrives: `make nominals data`, then inspect `artifacts/nominals.json` against the file by hand
+- [x] When the assigned card arrives: `make nominals data`, then inspect `artifacts/nominals.json` against the file by hand
 - [ ] Check that a re-run gives byte-identical CSVs (determinism)
 - [ ] Generate the final data **inside Docker** (`make docker-run T=data`) so the simulator version is the canonical one
-- [ ] Review the failure handling on the real card (convergence failures? which corners?)
+- [x] Review the failure handling on the real card (convergence failures? which corners?)
 
 ### Dataset size ("smallest dataset possible", brief Part A.1)
 - [ ] Learning curve with P2 (n = 1k, 2k, 5k, 10k → validation p95 error). Pick n and justify it

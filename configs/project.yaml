@@ -3,19 +3,19 @@
 # Fill in the TODO values with what the TAs assigned to the team.
 
 team:
-  name: TODO
+  name: "Hot Hot Chips"
   members:
-    P1: Manya      # transistor data quality + data checks (Part A, step 1)
-    P2: Joanna     # ML transistor models (Part A, step 2)
-    P3: Sindhuja   # gate-level validation (Part B)
-    P4: Gopal      # test circuit (Part C) + pipeline + report integration
+    P1: Manya Jain     # transistor data quality + data checks (Part A, step 1)
+    P2: Joanna Allu    # ML transistor models (Part A, step 2)
+    P3: Sindhuja Babu  # gate-level validation (Part B)
+    P4: Gopal Kataria  # test circuit (Part C) + pipeline + report integration
 
 assignment:
-  model_file: pdk/TODO.pm   # e.g. pdk/22nm_HP.pm (one of 16nm_HP ... 45nm_MGK)
-  node: TODO                # e.g. 22nm_HP
-  lmin: 22.0e-9             # TODO: feature size of the node, in metres (L = Lmin for every FET)
-  vdd_nominal: 0.9          # TODO: 0.9 or 1.0 (V), as assigned
-  test_circuit: cla3        # TODO: "cla3" (3-bit carry-lookahead adder) or "parity8" (8-bit parity checker)
+  model_file: pdk/32nm_LP.pm
+  node: 32nm_LP
+  lmin: 32.0e-9             # feature size of the node, in metres (L = Lmin for every FET)
+  vdd_nominal: 0.9          # 0.9 V, as assigned
+  test_circuit: parity8     # 8-bit parity checker
 
 simulator:
   binary: ngspice
