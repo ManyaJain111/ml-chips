@@ -94,8 +94,8 @@ The generator already works. P1's job is to make the data **correct, sufficient 
 
 ### Real datasets (D1, D2-FET)
 - [x] When the assigned card arrives: `make nominals data`, then inspect `artifacts/nominals.json` against the file by hand
-- [ ] Check that a re-run gives byte-identical CSVs (determinism)
-- [ ] Generate the final data **inside Docker** (`make docker-run T=data`) so the simulator version is the canonical one
+- [x] Check that a re-run gives byte-identical CSVs (determinism)
+- [x] ~~Generate the final data **inside Docker** (`make docker-run T=data`)~~ Not needed (team decision): final data is generated locally with ngspice-47
 - [x] Review the failure handling on the real card (convergence failures? which corners?)
 
 ### Dataset size ("smallest dataset possible", brief Part A.1)
