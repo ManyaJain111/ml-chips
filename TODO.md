@@ -157,15 +157,15 @@ is a working hand-built gate deck to start from.
 Config, env check, Makefile and Docker are done. Develop with dev corners + the placeholder `gate_ml.csv`.
 
 ### Circuit
-- [ ] `circuit/definition.py`: `xor2`, `build_cla3` **or** `build_parity8` (the assigned one), `get_circuit`, `validate_circuit`
-- [ ] `circuit/logic.py`: `all_input_vectors`, `evaluate`, `gate_input_bits`, `reference_function`
-- [ ] `tests/test_circuit.py`: remove the skip, exhaustive logic vs reference
-- [ ] `circuit/netlist.py`: `render_circuit_netlist` (use `render_gate_subckt` + `subckt_pins` + `gate_widths`)
-- [ ] `circuit/spice_ref.py`: `run_circuit_reference` with checkpoint/resume (the longest SPICE job)
-- [ ] `scripts/10_circuit_spice.py` → `circuit_spice.csv` + `circuit_{name}.sp`
-- [ ] `circuit/ml_model.py`: `predict_circuit_leakage`, `run_circuit_ml` (`GateLeakageModel.from_csv`)
-- [ ] `scripts/11_circuit_ml.py`; `circuit/report.py` + `scripts/12_circuit_report.py` → D8
-- [ ] *(nice-to-have)* `loading_error_analysis`
+- [x] `circuit/definition.py`: `xor2`, `build_cla3` **or** `build_parity8` (the assigned one), `get_circuit`, `validate_circuit`
+- [x] `circuit/logic.py`: `all_input_vectors`, `evaluate`, `gate_input_bits`, `reference_function`
+- [x] `tests/test_circuit.py`: remove the skip, exhaustive logic vs reference
+- [x] `circuit/netlist.py`: `render_circuit_netlist` (use `render_gate_subckt` + `subckt_pins` + `gate_widths`)
+- [x] `circuit/spice_ref.py`: `run_circuit_reference` with checkpoint/resume (the longest SPICE job)
+- [x] `scripts/10_circuit_spice.py` → `circuit_spice.csv` + `circuit_{name}.sp`
+- [x] `circuit/ml_model.py`: `predict_circuit_leakage`, `run_circuit_ml` (`GateLeakageModel.from_csv`)
+- [x] `scripts/11_circuit_ml.py`; `circuit/report.py` + `scripts/12_circuit_report.py` → D8
+- [x] *(nice-to-have)* `loading_error_analysis`
 
 ### Integration + report (D9, D10)
 - [ ] Final clean run: `make all` from an empty `data/ results/ artifacts/` in Docker, and record the wall time

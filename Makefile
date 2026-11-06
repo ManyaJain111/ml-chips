@@ -9,6 +9,10 @@
 # (Each script already parallelises its own ngspice runs.)
 .NOTPARALLEL:
 
+# ngspice is OpenMP-threaded: with several ngspice processes in parallel its busy-waiting threads
+# starve each other (measured 30-40x slower on 16 cores). Passive waiting fixes it.
+export OMP_WAIT_POLICY ?= passive
+
 CONFIG ?= configs/project.yaml
 RUN    ?= uv run python
 QUICK  ?=

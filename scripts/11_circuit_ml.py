@@ -8,7 +8,12 @@ from __future__ import annotations
 
 import argparse
 
-from leakml.config import DEFAULT_CONFIG
+from leakml import io
+from leakml.circuit.definition import get_circuit
+from leakml.circuit.ml_model import run_circuit_ml
+from leakml.cli import setup_logging
+from leakml.config import DEFAULT_CONFIG, ensure_dirs, load_config
+from leakml.gates.ml_model import GateLeakageModel
 
 
 def parse_args(argv=None):
@@ -19,12 +24,16 @@ def parse_args(argv=None):
 
 
 def main(argv=None) -> None:
-    args = parse_args(argv)  # noqa: F841  (remove the noqa once main() is implemented)
-    # TODO(P4):
-    # 1. gate_model = gates.ml_model.GateLeakageModel.from_results(read gate_ml.csv)
-    # 2. df = circuit.ml_model.run_circuit_ml(c, cfg, corners, gate_model)
-    # 3. save data/circuit/circuit_ml.csv
-    raise NotImplementedError
+    args = parse_args(argv)
+    setup_logging()
+    cfg = load_config(args.config, quick=args.quick)
+    ensure_dirs(cfg)
+    c = get_circuit(cfg.assignment.test_circuit)
+    corners = io.read_csv(cfg.paths.corners_csv)
+    gate_model = GateLeakageModel.from_csv(cfg.paths.gate_ml_csv)
+    df = run_circuit_ml(c, cfg, corners, gate_model)
+    io.write_csv(df, cfg.paths.circuit_ml_csv)
+    print(f"wrote {len(df)} rows -> {cfg.paths.circuit_ml_csv}")
 
 
 if __name__ == "__main__":

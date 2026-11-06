@@ -7,8 +7,16 @@ Outputs: data/circuit/circuit_spice.csv
 from __future__ import annotations
 
 import argparse
+import os
+import sys
 
-from leakml.config import DEFAULT_CONFIG
+from leakml import io
+from leakml.circuit.definition import get_circuit
+from leakml.circuit.netlist import render_circuit_netlist
+from leakml.circuit.spice_ref import run_circuit_reference
+from leakml.cli import setup_logging
+from leakml.config import DEFAULT_CONFIG, ensure_dirs, load_config
+from leakml.pdk import load_model_card
 
 
 def parse_args(argv=None):
@@ -22,14 +30,32 @@ def parse_args(argv=None):
 
 
 def main(argv=None) -> None:
-    args = parse_args(argv)  # noqa: F841  (remove the noqa once main() is implemented)
-    # TODO(P4):
-    # 1. c = circuit.definition.get_circuit(cfg.assignment.test_circuit)
-    # 2. corners = data/corners.csv (the SAME file as Part B)
-    # 3. df = circuit.spice_ref.run_circuit_reference(c, cfg, corners, card), with checkpointing
-    #    (this is the longest SPICE job in the project)
-    # 4. assert logic_ok everywhere, then save data/circuit/circuit_spice.csv
-    raise NotImplementedError
+    # parallel ngspice processes starve each other's OpenMP threads otherwise (30-40x slower)
+    os.environ.setdefault("OMP_WAIT_POLICY", "passive")
+    args = parse_args(argv)
+    setup_logging()
+    cfg = load_config(args.config, quick=args.quick)
+    ensure_dirs(cfg)
+    c = get_circuit(cfg.assignment.test_circuit)
+    corners = io.read_csv(cfg.paths.corners_csv)  # the SAME file as Part B
+    card = load_model_card(cfg.assignment.model_file)
+
+    # Deliverable 2: corner-0, all-zeros deck
+    c0 = corners.iloc[0].to_dict()
+    deck = render_circuit_netlist(c, "0" * len(c.primary_inputs), c0, card, cfg)
+    ex = cfg.paths.netlist_examples / f"circuit_{c.name}.sp"
+    ex.write_text(deck + "\n")
+
+    df = run_circuit_reference(c, cfg, corners, card, resume=args.resume)
+    bad = df[~df["logic_ok"]]
+    if len(bad):
+        print(
+            f"FAILED: {len(bad)}/{len(df)} rows failed or have wrong logic levels", file=sys.stderr
+        )
+        print(bad.head(10).to_string(), file=sys.stderr)
+        sys.exit(1)
+    io.write_csv(df, cfg.paths.circuit_spice_csv)
+    print(f"wrote {len(df)} rows -> {cfg.paths.circuit_spice_csv} (example deck: {ex})")
 
 
 if __name__ == "__main__":
