@@ -7,6 +7,7 @@ Line-up (record the hyperparameters in the report):
     gbdt           LightGBM, one LGBMRegressor per target via MultiOutputRegressor
     mlp            MLPRegressor on standardised features AND standardised targets
                    (TransformedTargetRegressor), early stopping on an internal 10 % hold-out
+                   (patience 150 epochs)
 
 Every model is a single sklearn object: fit(X, Z) with X the build_features() matrix and Z the
 (n, 4) target-space array from TargetTransform; predict(X) -> (n, 4). Each is seeded with
@@ -55,7 +56,7 @@ _DEFAULTS: dict[str, dict[str, Any]] = {
         "max_iter": 2000,
         "early_stopping": True,
         "validation_fraction": 0.1,
-        "n_iter_no_change": 30,
+        "n_iter_no_change": 150,  # 30 stopped at ~150-200 epochs; 150 cut val p95 by ~1/3
     },
 }
 
@@ -63,7 +64,10 @@ _SEARCH: dict[str, dict[str, list[Any]]] = {
     "poly_ridge": {"degree": [2, 3], "alpha": [1e-6, 1e-4, 1e-2]},
     "random_forest": {"max_features": [0.33, 0.66, 1.0], "min_samples_leaf": [1, 3]},
     "gbdt": {"num_leaves": [15, 31, 63], "learning_rate": [0.03, 0.1]},
-    "mlp": {"hidden_layer_sizes": [(64, 64), (128, 128), (128, 128, 128)], "alpha": [1e-5, 1e-3]},
+    "mlp": {
+        "hidden_layer_sizes": [(128, 128), (128, 128, 128), (256, 256, 256)],
+        "alpha": [1e-5, 1e-3],
+    },
 }
 
 

@@ -37,6 +37,8 @@ log = logging.getLogger(__name__)
 
 DEFAULT_I_FLOOR = 1e-15  # fallback only; scripts pass cfg.ml.i_floor_a
 TARGET_KIND = "asinh"  # see features.TargetTransform for the justification
+# Cases whose id/is are divided by tanh(vds/2vT) (features.TargetTransform.shape_channel)
+SHAPED_CASES: frozenset[Case] = frozenset({Case.NMOS_ON, Case.PMOS_ON})
 
 
 @dataclass
@@ -89,12 +91,13 @@ def fit_one(
     i_floor: float = DEFAULT_I_FLOOR,
     tune: bool = True,
     selection_metric: str = "p95_err_pct",
+    shape_channel: bool | None = None,
 ) -> FitResult:
     """Fit one model type on one case and score it on the validation split.
 
     With tune=True every point of zoo.search_space(model_name) is fitted on TRAIN and scored on
     VAL (selection_metric averaged over targets); the best point is kept. The test split is never
-    read here.
+    read here. shape_channel=None means "on for the ON cases" (see features.TargetTransform).
     """
     case = Case(case)
     train, val = splits["train"], splits["val"]
@@ -102,8 +105,10 @@ def fit_one(
 
     X_tr = build_features(train, case, nominal)
     X_va = build_features(val, case, nominal)
-    tt = TargetTransform(kind=TARGET_KIND).fit(train[targets])
-    Z_tr = tt.transform(train[targets])
+    if shape_channel is None:
+        shape_channel = case in SHAPED_CASES
+    tt = TargetTransform(kind=TARGET_KIND, shape_channel=shape_channel).fit(train[targets], train)
+    Z_tr = tt.transform(train[targets], train)
 
     space = zoo.search_space(model_name) if tune else {}
     grid = [dict(zip(space, combo, strict=True)) for combo in itertools.product(*space.values())]
@@ -261,6 +266,8 @@ def save_model(
         "hyperparams": best.hyperparams,
         "feature_names": best.feature_names,
         "target_transform": {"kind": best.target_transform.kind,
+                             "shape_channel": bool(getattr(best.target_transform,
+                                                           "shape_channel", False)),
                              "i0": [float(x) for x in (best.target_transform.i0_
                                                        if best.target_transform.i0_ is not None
                                                        else [])]},

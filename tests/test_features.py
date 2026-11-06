@@ -120,3 +120,27 @@ def test_log10_abs_constant_sign_and_mixed_sign_guard():
 def test_unfitted_transform_raises():
     with pytest.raises(RuntimeError):
         TargetTransform(kind="asinh").transform(_currents(3))
+
+
+def test_shape_channel_round_trip_and_removes_sign():
+    X = _inputs(300, device="nmos")
+    Y = _currents(300)
+    sgn = np.sign(X["vd"] - X["vs"]).to_numpy()
+    Y["id"] = np.abs(Y["id"]) * sgn  # channel-like: id follows sign(vd - vs), is = -id
+    Y["is"] = -Y["id"]
+    tt = TargetTransform(kind="asinh", shape_channel=True).fit(Y, X)
+    Z = tt.transform(Y, X)
+    assert (Z[:, 0] > 0).all() and (Z[:, 2] < 0).all()  # one-signed after dividing by tanh
+    back = tt.inverse_transform(Z, X)
+    np.testing.assert_allclose(back.to_numpy(), Y.to_numpy(), rtol=1e-9)
+    assert back.index.equals(X.index)
+    with pytest.raises(ValueError, match="X_raw"):
+        tt.inverse_transform(Z)
+
+
+def test_models_pickled_before_shape_channel_still_work():
+    """Bundles saved before the field existed unpickle without it: must behave as unshaped."""
+    Y = _currents(50)
+    tt = TargetTransform(kind="asinh").fit(Y)
+    del tt.__dict__["shape_channel"]
+    np.testing.assert_allclose(tt.inverse_transform(tt.transform(Y)).to_numpy(), Y.to_numpy())

@@ -103,6 +103,15 @@ class TargetTransform:
     kind="log10_abs" (z = log10|I|) is also available, but only for targets whose sign is
     constant in the training data (the sign is then stored and restored). It raises on a target
     with mixed signs instead of silently guessing the sign.
+
+    shape_channel=True (used for the ON cases): before the transform, id and is are divided by
+    channel_shape(X) = tanh((vd - vs) / 2vT), and multiplied back on the way out. The channel
+    current crosses zero at vd = vs, with the shape (1 - exp(-vds/vT)) in subthreshold and ~vds
+    in the linear region; dividing by tanh(vds/2vT) removes that zero crossing and the sign, so
+    the model learns a smooth, one-signed remainder. On validation this cut the ON-case mlp p95
+    error for id/is from 164/206 % to 34/48 % (nmos_on). It is NOT used for the OFF cases: there
+    id/is near vd = vs are dominated by junction leakage, which does not flip with vds, and
+    dividing made them worse. Needs X_raw in fit/transform/inverse_transform.
     """
 
     kind: str = "log10_abs"  # "log10_abs" | "asinh"
@@ -111,13 +120,27 @@ class TargetTransform:
     i0_min: float = 1e-30
     i0_: np.ndarray | None = field(default=None, repr=False)  # fitted, shape (4,)
     sign_: np.ndarray | None = field(default=None, repr=False)  # fitted (log10_abs), shape (4,)
+    shape_channel: bool = False  # divide id/is by channel_shape(X) (ON cases)
 
-    def _y(self, y: pd.DataFrame) -> np.ndarray:
-        return y.loc[:, list(TARGET_COLUMNS)].to_numpy(dtype=float)
+    @property
+    def _shaped(self) -> bool:
+        # getattr: models pickled before this field existed load with it missing -> False
+        return bool(getattr(self, "shape_channel", False))
 
-    def fit(self, y: pd.DataFrame) -> TargetTransform:
-        """Learn the per-target scale (asinh) or the per-target sign (log10_abs)."""
-        Y = self._y(y)
+    def _y(self, y: pd.DataFrame, X_raw: pd.DataFrame | None = None) -> np.ndarray:
+        Y = y.loc[:, list(TARGET_COLUMNS)].to_numpy(dtype=float)
+        if self._shaped:
+            Y = Y.copy()
+            Y[:, _CHANNEL_IDX] /= channel_shape(_require_x(X_raw))[:, None]
+        return Y
+
+    def fit(self, y: pd.DataFrame, X_raw: pd.DataFrame | None = None) -> TargetTransform:
+        """Learn the per-target scale (asinh) or the per-target sign (log10_abs).
+
+        X_raw (raw inputs, same rows as y) is required when shape_channel is True; y itself
+        works too, since the training DataFrame holds both inputs and currents.
+        """
+        Y = self._y(y, X_raw if X_raw is not None else (y if self._shaped else None))
         if self.kind == "asinh":
             q = np.quantile(np.abs(Y), self.quantile, axis=0)
             self.i0_ = np.maximum(q, self.i0_min)
@@ -140,10 +163,10 @@ class TargetTransform:
         ):
             raise RuntimeError("TargetTransform is not fitted; call fit() first")
 
-    def transform(self, y: pd.DataFrame) -> np.ndarray:
+    def transform(self, y: pd.DataFrame, X_raw: pd.DataFrame | None = None) -> np.ndarray:
         """Currents (A) to target space, shape (n, 4) in TARGET_COLUMNS order."""
         self._check_fitted()
-        Y = self._y(y)
+        Y = self._y(y, X_raw if X_raw is not None else (y if self._shaped else None))
         if self.kind == "asinh":
             return np.arcsinh(Y / self.i0_)
         return np.log10(np.abs(Y))
@@ -151,8 +174,7 @@ class TargetTransform:
     def inverse_transform(self, z: np.ndarray, X_raw: pd.DataFrame | None = None) -> pd.DataFrame:
         """Target space back to currents (A), DataFrame[TARGET_COLUMNS] (index of X_raw if given).
 
-        X_raw is not needed by either transform (the sign is carried by asinh, or is constant for
-        log10_abs); it only provides the index.
+        X_raw provides the index, and the vd/vs/temp needed to undo shape_channel.
         """
         self._check_fitted()
         Z = np.asarray(z, dtype=float)
@@ -162,5 +184,29 @@ class TargetTransform:
             Y = np.sinh(Z) * self.i0_
         else:
             Y = self.sign_ * np.power(10.0, Z)
+        if self._shaped:
+            Y = Y.copy()
+            Y[:, _CHANNEL_IDX] *= channel_shape(_require_x(X_raw))[:, None]
         index = X_raw.index if X_raw is not None else None
         return pd.DataFrame(Y, index=index, columns=list(TARGET_COLUMNS))
+
+
+_CHANNEL_IDX = [TARGET_COLUMNS.index("id"), TARGET_COLUMNS.index("is")]
+_SHAPE_MIN = 1e-9  # |tanh| floor so vd == vs exactly cannot divide by zero
+
+
+def channel_shape(X_raw: pd.DataFrame) -> np.ndarray:
+    """tanh((vd - vs) / 2vT): the sign and zero crossing of the channel current.
+
+    Raw vd - vs for both devices: channel current flows into the drain terminal when vd > vs,
+    for NMOS and PMOS alike. Magnitude floored at 1e-9 (sign kept).
+    """
+    v_t = K_OVER_Q * (X_raw["temp"].to_numpy(dtype=float) + T_ZERO_C)
+    t = np.tanh((X_raw["vd"].to_numpy(dtype=float) - X_raw["vs"].to_numpy(dtype=float)) / (2 * v_t))
+    return np.where(t >= 0, 1.0, -1.0) * np.maximum(np.abs(t), _SHAPE_MIN)
+
+
+def _require_x(X_raw: pd.DataFrame | None) -> pd.DataFrame:
+    if X_raw is None:
+        raise ValueError("shape_channel=True needs X_raw (vd, vs, temp) for the same rows")
+    return X_raw

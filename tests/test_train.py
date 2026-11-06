@@ -131,3 +131,13 @@ def test_regressor_rejects_stale_feature_list(splits):
     reg = TransistorRegressor(Case.NMOS_OFF, r.estimator, r.target_transform, ["old"], NOMINAL)
     with pytest.raises(ValueError, match="Retrain"):
         reg.predict(splits["val"])
+
+
+def test_shape_channel_default_is_on_cases_only(splits):
+    on = train.fit_one(Case.NMOS_ON, "poly_ridge", splits, seed=7, **FAST)
+    off = train.fit_one(Case.NMOS_OFF, "poly_ridge", splits, seed=7, **FAST)
+    forced = train.fit_one(Case.NMOS_OFF, "poly_ridge", splits, seed=7, shape_channel=True, **FAST)
+    assert on.target_transform.shape_channel and not off.target_transform.shape_channel
+    assert forced.target_transform.shape_channel
+    X = splits["val"]
+    assert np.isfinite(on.regressor().predict(X)).all()
