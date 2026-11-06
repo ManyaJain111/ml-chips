@@ -8,7 +8,7 @@ Team: Manya (P1), Joanna (P2), Sindhuja (P3), Gopal (P4), also in `configs/proje
 | **P1** Manya | Transistor data quality + data checks (Part A.1) | `data/checks.py`, scripts 01–03, maintains `pdk.py`, `sampling.py`, `spice/`, `data/generate.py`, `plotting.py` | D1, D2 (FET), D3 |
 | **P2** Joanna | ML transistor models (Part A.2) | `ml/*`, `metrics.py`, scripts 04–05 | D4, D5 |
 | **P3** Sindhuja | Gate-level validation (Part B) | `gates/*`, scripts 06–09 | D2 (gates), D6, D7 |
-| **P4** Gopal | Test circuit (Part C) + pipeline + report | `config.py`, `circuit/*`, scripts 00, 10–12, Makefile/Docker, `report/` | D2 (circuit), D8, D9, D10 |
+| **P4** Gopal | Test circuit (Part C) + pipeline + report | `config.py`, `circuit/*`, scripts 00, 10–12, Makefile, `report/` | D2 (circuit), D8, D9, D10 |
 
 ---
 
@@ -95,7 +95,7 @@ The generator already works. P1's job is to make the data **correct, sufficient 
 ### Real datasets (D1, D2-FET)
 - [x] When the assigned card arrives: `make nominals data`, then inspect `artifacts/nominals.json` against the file by hand
 - [x] Check that a re-run gives byte-identical CSVs (determinism)
-- [x] ~~Generate the final data **inside Docker** (`make docker-run T=data`)~~ Not needed (team decision): final data is generated locally with ngspice-47
+- [x] ~~Generate the final data inside Docker~~ Dropped (team decision): final data is generated locally with ngspice-47
 - [x] Review the failure handling on the real card (convergence failures? which corners?)
 
 ### Dataset size ("smallest dataset possible", brief Part A.1)
@@ -154,7 +154,7 @@ is a working hand-built gate deck to start from.
 
 ## P4 (Gopal): test circuit (Part C) + pipeline + report
 
-Config, env check, Makefile and Docker are done. Develop with dev corners + the placeholder `gate_ml.csv`.
+Config, env check, Makefile are done. Develop with dev corners + the placeholder `gate_ml.csv`.
 
 ### Circuit
 - [x] `circuit/definition.py`: `xor2`, `build_cla3` **or** `build_parity8` (the assigned one), `get_circuit`, `validate_circuit`
@@ -168,7 +168,7 @@ Config, env check, Makefile and Docker are done. Develop with dev corners + the 
 - [x] *(nice-to-have)* `loading_error_analysis`
 
 ### Integration + report (D9, D10)
-- [ ] Final clean run: `make all` from an empty `data/ results/ artifacts/` in Docker, and record the wall time
+- [ ] Final clean run: `make all` from an empty `data/ results/ artifacts/`, and record the wall time
 - [ ] `report/report.md`: assemble everyone's sections, *Setup*, *Test-circuit results*, final proofread
 - [ ] Check the submission against brief §6 (the deliverables table in SPEC §10)
 
