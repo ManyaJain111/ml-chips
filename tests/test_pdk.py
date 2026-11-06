@@ -1,5 +1,8 @@
 """leakml.pdk (implemented foundation)."""
 
+import re
+from pathlib import Path
+
 import pytest
 
 from leakml.constants import PROCESS_PARAMS
@@ -65,3 +68,31 @@ def test_missing_param_raises(tmp_path):
 
 def test_rename_model(card):
     assert render_model_card(card, "nmos", {}, model_name="nfix").lower().startswith(".model  nfix")
+
+
+def _flag(text: str, name: str) -> list[str]:
+    return re.findall(rf"(?<![\w.]){name}\s*=\s*(\S+)", text, re.IGNORECASE)
+
+
+def test_rgatemod_forced_off(tmp_path):
+    f = tmp_path / "r.pm"
+    f.write_text(
+        ".model nmos nmos level=54\n+rgatemod= 1 vth0 = 0.4 toxe = 1e-9 ndep = 1e18 u0 = 0.03"
+        " xj = 1e-8\n"
+        ".model pmos pmos level=54\n+vth0 = -0.4 toxe = 1e-9 ndep = 1e18 u0 = 0.01 xj = 1e-8\n"
+    )
+    card = load_model_card(f)
+    for dev in ("nmos", "pmos"):  # present (set to 0) and absent (appended as 0)
+        assert _flag(
+            render_model_card(card, dev, {"vth0": 0.3 if dev == "nmos" else -0.3}), "rgatemod"
+        ) == ["0"]
+    assert _flag(f.read_text(), "rgatemod") == ["1"]
+
+
+def test_real_card_rgatemod_off():
+    pm = Path(__file__).resolve().parents[1] / "pdk" / "32nm_LP.pm"
+    if not pm.is_file():
+        pytest.skip("assigned PDK not present")
+    card = load_model_card(pm)
+    for dev in ("nmos", "pmos"):
+        assert _flag(card.block(dev), "rgatemod") == ["0"]
