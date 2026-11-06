@@ -1,0 +1,182 @@
+% P2 (Joanna): report sections 3 (Transistor models), 6 (Error analysis, transistor part)
+% and 7 (Limitations and improvements).
+%
+% Use:   \input{sections/p2_transistor}   from the main report (or pandoc it into report.md).
+% Needs: \usepackage{amsmath, array, booktabs, graphicx, xcolor}
+%        \newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+%
+% Numbers marked "first-round" come from the models committed in 1f1d9f7 / validation
+% experiments run on 2026-11-07. Everything that depends on the FINAL retrain (after the
+% low-Vds data from P1) is marked \todo and must be pasted from results/tables/*.md.
+
+\section{Transistor models}\label{sec:models}
+
+\subsection{Data split}
+Each of the four single-transistor datasets (\texttt{nmos\_on}, \texttt{nmos\_off},
+\texttt{pmos\_on}, \texttt{pmos\_off}) is shuffled with a fixed seed (\texttt{seeds.split}~$=42$)
+and split 70/15/15 into training, validation and test sets (7\,000/1\,500/1\,500 rows for
+10\,000 samples). The row indices of every split are saved in \texttt{artifacts/splits/} so
+the split is reproducible and auditable. All model choices---model type, hyperparameters and
+preprocessing---are made on the validation set only; the test set is used exactly once, in
+\texttt{scripts/05\_finalize\_models.py}, to report the chosen models.
+\todo{update counts if P1's low-$V_{DS}$ sampling changes the dataset size}
+
+\subsection{Input features}
+The raw inputs are $V_{DD}$, $T$, $W$, $V_D$, $V_S$, $V_G$, $V_B$ and the five varied BSIM4
+parameters (\texttt{vth0}, \texttt{toxe}, \texttt{ndep}, \texttt{u0}, \texttt{xj}). Within one
+case $V_G$ and $V_B$ are always $0$ or $V_{DD}$, so they carry no information on their own; the
+terminal voltage \emph{differences} do. From the raw inputs we build 22 features:
+\begin{itemize}
+  \item supply and temperature: $V_{DD}$, $T$ (K), $1/T$, thermal voltage $v_T = kT/q$;
+  \item geometry: $W$, $\ln W$;
+  \item bias: $V_{GS}$, $V_{DS}$, $V_{BS}$, $V_{GD}$, $V_{BD}$, $|V_{DS}|$;
+  \item subthreshold physics: $V_{GS}/v_T$, $V_{DS}/v_T$, $(V_{GS}-|V_{th0}|)/v_T$ and the drain
+        factor $1-e^{-|V_{DS}|/v_T}$;
+  \item process: the five parameters divided by their nominal values from the model card
+        (so they lie in $[0.9, 1.1]$), plus $1/t_{ox}$, since gate tunnelling grows steeply as
+        the oxide gets thinner.
+\end{itemize}
+For PMOS every voltage difference is negated (e.g.\ $V_{SG}$ instead of $V_{GS}$) and
+$|V_{th0}|$ is used, so PMOS features read like NMOS ones: $V_{GS}>0$ always means ``more on''.
+The same function computes the features in training and inside the saved model, and the
+feature list is stored in the model file; a model refuses to predict if the feature code
+has changed since it was trained.
+
+\subsection{Target transform}
+The four terminal currents span about ten decades (from $\sim\!10^{-22}$\,A for OFF-state
+gate current to $\sim\!10^{-4}$\,A for ON-state drain current) and $I_D$, $I_S$ change sign
+with $V_D-V_S$. Regressing amperes with a squared loss would fit only the largest currents, so
+each model predicts
+\begin{equation}
+  z_t = \operatorname{asinh}\!\left(\frac{I_t}{i_{0,t}}\right),\qquad
+  t \in \{I_D, I_G, I_S, I_B\},
+\end{equation}
+where $i_{0,t}$ is the 1st percentile of $|I_t|$ on the training rows. For $|I|\gg i_0$,
+$\operatorname{asinh}(I/i_0)\approx \operatorname{sign}(I)\ln(2|I|/i_0)$, so an error
+$\delta z$ is a relative current error of about $\delta z$, which is exactly what we are judged
+on. Unlike $\log_{10}|I|$, asinh is smooth through zero and carries the sign, so no separate sign
+model is needed. A per-target $i_0$ is necessary because the currents live on very different
+scales: one fixed $i_0$ cannot be ``small'' for all of them.
+
+\paragraph{Channel shaping (ON cases).}
+In the ON cases the channel current passes through zero at $V_D=V_S$ with the shape
+$1-e^{-V_{DS}/v_T}$ in subthreshold and $\propto V_{DS}$ in the linear region. For
+\texttt{nmos\_on} and \texttt{pmos\_on}, $I_D$ and $I_S$ are therefore divided by
+\begin{equation}
+  s(V_{DS}) = \tanh\!\left(\frac{V_D - V_S}{2 v_T}\right)
+\end{equation}
+before the transform and multiplied back afterwards; the model then learns a smooth,
+one-signed quantity. On the validation set this reduced the 95th-percentile error of the
+\texttt{nmos\_on} MLP from 164\,\% / 206\,\% to 34\,\% / 48\,\% for $I_D$ / $I_S$. It is
+\emph{not} used for the OFF cases: there $I_D$ and $I_S$ near $V_D=V_S$ are dominated by
+junction leakage, which does not change sign with $V_{DS}$, and shaping made them worse
+(\texttt{nmos\_off} GBDT: 65\,\% / 100\,\% $\rightarrow$ 70\,\% / 111\,\%).
+
+\subsection{Model types and hyperparameters}
+Four model types are compared for every case (Table~\ref{tab:hyper}). Each predicts all four
+transformed currents at once. Inputs are standardised, and every estimator is seeded
+(\texttt{seeds.training}~$=7$). Each model type has a small grid (6 points) that is searched
+on the validation set; the grid point with the lowest validation score is kept.
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.2\linewidth}>{\raggedright\arraybackslash}p{0.4\linewidth}>{\raggedright\arraybackslash}p{0.36\linewidth}@{}}
+\toprule
+Model & Defaults & Validation grid \\
+\midrule
+Polynomial ridge & degree 3, $\alpha=10^{-4}$ & degree $\{2,3\}$, $\alpha\in\{10^{-6},10^{-4},10^{-2}\}$ \\
+Random forest & 300 trees, all features per split, min.\ leaf 1 & max.\ features $\{0.33,0.66,1\}$, min.\ leaf $\{1,3\}$ \\
+GBDT (LightGBM) & 1000 trees, lr 0.05, 31 leaves, subsample 0.8, colsample 0.8 & leaves $\{15,31,63\}$, lr $\{0.03,0.1\}$ \\
+MLP & $128\times128$, $\alpha=10^{-4}$, Adam lr $10^{-3}$, batch 128, early stopping (10\,\% hold-out, patience 150) & layers $\{128^2, 128^3, 256^3\}$, $\alpha\in\{10^{-5},10^{-3}\}$ \\
+\bottomrule
+\end{tabular}
+\caption{Model types, default hyperparameters and validation search grids. GBDT uses one
+LightGBM regressor per current; the MLP also standardises its targets.}
+\label{tab:hyper}
+\end{table}
+
+The MLP patience was raised from 30 to 150 epochs after we saw that early stopping ended
+training after only 150--200 epochs; on validation the longer patience cut the
+\texttt{nmos\_on} $I_D$/$I_S$ 95th-percentile error from 34/48\,\% to 24/24\,\% and the
+\texttt{nmos\_off} $I_S$ error from 144\,\% to 87\,\%.
+
+\subsection{Selection and metrics}
+Errors are relative, $e = (I_{ML}-I_{SPICE})/|I_{SPICE}|$, and we report the median and 95th
+percentile of $|e|$, plus $R^2$ on $\log_{10}|I|$. Samples with $|I_{SPICE}| < 10^{-15}$\,A are
+excluded from the relative errors (they would dominate them while contributing nothing to
+leakage); this removes all OFF-state gate currents ($\sim\!10^{-22}$\,A). For every case the
+model with the lowest validation 95th-percentile error, averaged over the currents that have
+one, is selected; ties are broken by the median error and then by training time.
+
+\subsection{Results}
+\todo{paste results/tables/model\_comparison\_summary.md (validation, 4 models $\times$ 4
+cases: $R^2$, median, p95) as Table~X; the long per-current table goes to the appendix}
+
+\todo{paste results/tables/chosen\_models.md: chosen model per case and its validation score}
+
+\todo{paste results/tables/chosen\_models\_test.md: test median and p95 per case and current}
+
+\todo{include results/plots/pred\_vs\_spice\_\{nmos\_on,nmos\_off,pmos\_on,pmos\_off\}.png as a
+2$\times$2 figure}
+
+\todo{one paragraph: which model type won per case and why (first round: GBDT for the ON
+cases, MLP for the OFF cases; polynomial ridge was far worse everywhere)}
+
+
+\section{Error analysis: transistor models}\label{sec:error-transistor}
+% P3 (gates) and P4 (circuit) add their own subsections.
+
+The following was measured on the \emph{validation} set with the first-round models (before
+channel shaping); \todo{re-measure with the final models and update the numbers}.
+
+\paragraph{ON-state $I_D$, $I_S$ near $V_D = V_S$.}
+The largest relative errors by far are ON-state drain and source currents at small $|V_{DS}|$.
+For \texttt{nmos\_on} $I_D$ the 95th-percentile error is 506\,\% for $|V_{DS}|<10$\,mV,
+67\,\% for 30--100\,mV and 30\,\% above 0.3\,V (\texttt{pmos\_on}: 544\,\%, 66\,\%, 29\,\%).
+The channel current passes through zero there, so a small absolute error is a large relative
+one. This motivated the channel shaping above.
+
+\paragraph{OFF-state source current.}
+OFF-state $I_S$ is the worst-predicted current overall (95th-percentile error
+$\approx 100$\,\% for $|V_{DS}|<0.1$\,V). It is tiny (often below $10^{-14}$\,A), changes
+sign, and over 40\,\% of its samples fall below the $10^{-15}$\,A floor.
+
+\paragraph{Temperature.}
+OFF-state body (junction) current gets harder to predict as temperature rises: for
+\texttt{nmos\_off} $I_B$ the 95th-percentile error grows from 6.5\,\% below 0\,$^\circ$C to
+21\,\% above 85\,$^\circ$C, following the steep temperature dependence of junction leakage.
+
+\paragraph{Coverage of the operating point.}
+In a static CMOS gate every ON transistor conducts no DC current, so its drain and source sit
+at the same rail: $V_{DS}\approx 0$ (in our gate simulations the median is about
+$2\times10^{-7}$\,V). The first-round training data sampled $V_D$ and $V_S$ uniformly in
+$[0,V_{DD}]$, so only 26 of 10\,000 \texttt{nmos\_on} rows and 17 of 10\,000 \texttt{pmos\_on}
+rows had $|V_{DS}|<1$\,mV. The ON models were therefore asked to predict at a point they had
+almost never seen, which is also where they are least accurate.
+\todo{describe P1's low-$V_{DS}$ sampling and its effect once the data is regenerated}
+(The gate data was used only to identify this problem; it was never used to train, tune or
+select transistor models.)
+
+
+\section{Limitations and improvements}\label{sec:limitations}
+% P2 leads; P1, P3, P4 add their points.
+
+\begin{itemize}
+  \item \textbf{Training data vs.\ operating point.} Uniform sampling of $V_D$, $V_S$
+        under-represents the bias points that matter in gates ($V_{DS}\approx 0$ for ON
+        devices). Sampling should follow where the models will be used.
+        \todo{update once low-$V_{DS}$ data is in}
+  \item \textbf{Relative error near zero current.} Currents that cross zero (ON $I_D$, $I_S$)
+        or are tiny (OFF $I_S$) have unbounded relative error; the $10^{-15}$\,A floor only
+        partly addresses this. Their contribution to gate leakage is small, but they dominate
+        the per-current statistics.
+  \item \textbf{Gate voltage fixed at $0$ or $V_{DD}$.} The models only see ideal gate
+        voltages; inside AND2/OR2 the internal inverter input is snapped to the nearest rail.
+  \item \textbf{Independent models per current.} Kirchhoff's law ($\sum I = 0$) is not
+        enforced; predicting three currents and deriving the fourth would guarantee it.
+  \item \textbf{MLP training is sensitive to early stopping.} The patience setting alone
+        changed the error by about a third; a learning-rate schedule or longer training could
+        help further.
+  \item \todo{learning-curve result with P1: does the error still fall at 7\,000 training
+        rows? If yes, more data is an improvement.}
+\end{itemize}
