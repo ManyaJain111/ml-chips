@@ -68,4 +68,4 @@ date: "TODO"
 
 # Appendix
 - Example netlists (`netlists/examples/`)
-- How to reproduce: `make all` (or `make docker-run T=all`)
+- How to reproduce: `make all`

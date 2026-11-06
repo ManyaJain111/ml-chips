@@ -17,7 +17,6 @@ make bootstrap CONFIG=configs/dev.yaml QUICK=1   # dev inputs for every stage (~
 make check                       # env sanity check (ngspice, model file, versions)
 make partA QUICK=1               # pilot run, small samples, writes to *_pilot folders
 make all                         # full pipeline, scripts 00 -> 12 in order
-make docker-build && make docker-run T=all   # same, inside the pinned container
 uv run python scripts/07_gate_spice.py --config configs/dev.yaml --quick   # a single step
 ```
 Until the assigned PDK is in `pdk/`, use `--config configs/dev.yaml` (synthetic card). Code never
@@ -70,7 +69,7 @@ report/                the written report
 | `pdk.py`, `sampling.py`, `spice/`, `data/`, `plotting.py`, scripts 01–03 | P1 (Manya) |
 | `ml/`, `metrics.py`, scripts 04–05 | P2 (Joanna) |
 | `gates/`, scripts 06–09 | P3 (Sindhuja) |
-| `config.py`, `circuit/`, scripts 00 and 10–12, Makefile, Dockerfile, `report/` | P4 (Gopal) |
+| `config.py`, `circuit/`, scripts 00 and 10–12, Makefile, `report/` | P4 (Gopal) |
 | `constants.py`, `io.py`, `cli.py`, SPEC.md, `scripts/dev_*` | shared, any change needs agreement |
 
 **Already implemented (the foundation):** everything other stages call into, i.e. config, io,

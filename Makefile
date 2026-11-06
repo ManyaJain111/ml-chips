@@ -19,12 +19,9 @@ QUICK  ?=
 QFLAG   = $(if $(QUICK),--quick,)
 ARGS    = --config $(CONFIG) $(QFLAG)
 
-IMAGE  ?= leakml:latest
-T      ?= all
-
 .PHONY: setup check nominals data datacheck train finalize corners gates-spice gates-ml \
         gates-report circuit-spice circuit-ml circuit-report partA partB partC all baseline bootstrap \
-        test lint fmt docker-build docker-shell docker-run
+        test lint fmt
 
 setup:
 	uv sync
@@ -64,13 +61,3 @@ bootstrap: check nominals data corners baseline
 test: ; uv run pytest
 lint: ; uv run ruff check src scripts tests
 fmt:  ; uv run ruff format src scripts tests
-
-# ---------------------------------------------------------------- container
-docker-build:
-	docker build -t $(IMAGE) .
-
-docker-shell:
-	docker run --rm -it --user $$(id -u):$$(id -g) -v $$PWD:/work $(IMAGE) bash
-
-docker-run:
-	docker run --rm --user $$(id -u):$$(id -g) -v $$PWD:/work $(IMAGE) make $(T) RUN=python CONFIG=$(CONFIG) QUICK=$(QUICK)
