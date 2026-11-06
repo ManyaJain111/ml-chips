@@ -19,5 +19,8 @@
       "u0": 0.016,
       "xj": 1e-08
     }
+  },
+  "model_overrides": {
+    "rgatemod": 0
   }
 }
