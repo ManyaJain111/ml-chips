@@ -1,44 +1,78 @@
-# leakml: ML-driven PVT-variation-aware leakage estimation
+# leakml: PVT-aware CMOS leakage estimation
 
-Digital VLSI Design course project. Brief: [DVD_ML_PROJECT.pdf](DVD_ML_PROJECT.pdf).
+Course project for estimating transistor, logic-gate, and circuit leakage under process, voltage,
+and temperature variation. The implementation builds SPICE data for four transistor operating
+cases, trains four current-prediction models, composes the models into five static CMOS gates, and
+evaluates the assigned test circuit against a transistor-level SPICE reference.
 
-- [SPEC.md](SPEC.md): technical spec and module contracts
-- [TODO.md](TODO.md): 4-person work split and milestones
-- [AGENTS.md](AGENTS.md): rules and conventions for humans and AI agents
+## Current assignment
 
-## Quickstart
+| Setting | Value |
+|---|---|
+| Model card | `models/32nm_LP.pm` |
+| Node | 32 nm LP |
+| Nominal VDD | 0.9 V |
+| Lmin | 32 nm |
+| Test circuit | 8-bit odd-parity checker |
+
+The assignment settings and all run knobs live in [`configs/project.yaml`](configs/project.yaml).
+The per-person entry points `configs/manya.yaml`, `configs/joanna.yaml`, `configs/sindhuja.yaml`,
+and `configs/gopal.yaml` inherit those shared settings and add an `active_person` label. They
+intentionally use the same seeds and artifact paths so one owner's stage can consume another
+owner's output without copying files. The default remains `configs/project.yaml`.
+The supplied model card describes its own nominal supply as 1.0 V; the project config follows the
+team assignment of 0.9 V. Nominal process parameters are parsed from the model card and are never
+hard-coded in the sampler.
+
+## Quick start
+
+Requirements: Python 3.11 or newer (the lock file uses Python 3.12), [uv](https://docs.astral.sh/uv/),
+GNU Make, and `ngspice` on `PATH`.
+
 ```bash
 uv sync
 make test
-# Develop now, on a synthetic model card, with stand-in inputs for every stage (~20 s):
-make bootstrap CONFIG=configs/dev.yaml QUICK=1
-
-# Real run: fill configs/project.yaml with the TA assignment and drop the PTM file into pdk/
-make check            # ngspice + model file + versions -> artifacts/env.json
-make partA QUICK=1    # pilot run
-make all              # full pipeline (scripts 00 -> 12)
+make lint
+make check
 ```
-See [TODO.md](TODO.md) → "Day 1" and SPEC §11 for how the four parts are developed in parallel.
 
-Reproducible container (pinned ngspice + Python deps):
+To run the complete assigned pipeline after the environment check:
+
 ```bash
-make docker-build
-make docker-run T=all
+make all
 ```
+
+An owner may select their config without changing the shared project parameters, for example
+`make train CONFIG=configs/joanna.yaml` or
+`uv run python scripts/07_gate_spice.py --config configs/sindhuja.yaml`.
+
+For a small development run using the fixture PDK and stand-in transistor models, see
+[`howtorun.md`](howtorun.md). Pilot and development runs write under `_pilot`/`_dev` paths and are
+not project deliverables.
 
 ## Pipeline
-| Step | Script | Produces |
+
+| Step | Command target / script | Main output |
 |---|---|---|
-| 00 | check_env | `artifacts/env.json` |
-| 01 | extract_nominals | `artifacts/nominals.json` |
-| 02 | generate_transistor_data | `data/transistor/*.csv` (D1) |
-| 03 | data_check | Kirchhoff table + trend plots (D3) |
-| 04 | train_compare | model comparison table (D4) |
-| 05 | finalize_models | `artifacts/models/*.joblib`, test metrics (D5) |
-| 06 | generate_corners | `data/corners.csv` |
-| 07 | gate_spice | `data/gates/gate_spice.csv` |
-| 08 | gate_ml | `data/gates/gate_ml.csv` |
-| 09 | gate_report | gate table + parity plot (D6, D7) |
-| 10 | circuit_spice | `data/circuit/circuit_spice.csv` |
-| 11 | circuit_ml | `data/circuit/circuit_ml.csv` |
-| 12 | circuit_report | circuit table + parity plot (D8) |
+| 00 | `make check` / `scripts/00_check_env.py` | `artifacts/env.json` |
+| 01 | `make nominals` / `scripts/01_extract_nominals.py` | `artifacts/nominals.json` |
+| 02 | `make data` / `scripts/02_generate_transistor_data.py` | Four `data/transistor/*.csv` datasets |
+| 03 | `make datacheck` / `scripts/03_data_check.py` | KCL table and transistor trend plots |
+| 04 | `make train` / `scripts/04_train_compare.py` | Validation comparison and candidate models |
+| 05 | `make finalize` / `scripts/05_finalize_models.py` | Four final models, test metrics, parity plots |
+| 06 | `make corners` / `scripts/06_generate_corners.py` | Shared `data/corners.csv` |
+| 07–09 | `make partB` | Gate SPICE, gate ML, tables, parity plot |
+| 10–12 | `make partC` | Circuit SPICE, hierarchical ML, tables, parity plot |
+
+The full contracts, data schemas, sign conventions, and scoring definitions are in
+[`SPEC.md`](SPEC.md) (also linked by [`specs.md`](specs.md)). The module-by-module reference is in
+[`docs.md`](docs.md), and execution recipes are in [`howtorun.md`](howtorun.md). Work status and
+remaining project deliverables are tracked in [`TODO.md`](TODO.md).
+
+## Project status
+
+The implementation and development checks are in place. The real model environment check and
+nominal extraction passed; a one-corner real-card gate smoke check passed all 18 gate/input cases.
+The complete 40,000-row assigned transistor data run and the 200-corner gate/circuit evaluation have
+not yet been executed, so no assigned-model accuracy claim is reported. See `report/report.md` for
+the current setup note and generated-result locations.
