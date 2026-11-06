@@ -6,6 +6,9 @@ The assigned model file (e.g. pdk/22nm_HP.pm) is a Predictive Technology Model c
     card = load_model_card(cfg.assignment.model_file)
     card.nominal["pmos"]["vth0"]                          # -> negative for PMOS
     text = render_model_card(card, "nmos", {"vth0": 0.45, "toxe": 1.2e-9, ...})
+
+Model-flag overrides (MODEL_OVERRIDES) are applied once, in load_model_card, so every deck in
+every part (transistor, gate, circuit) is built from the same card. The .pm file is never edited.
 """
 
 from __future__ import annotations
@@ -24,6 +27,13 @@ DEVICES: tuple[Device, ...] = ("nmos", "pmos")
 
 _NUM = r"[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?[a-zA-Z]*"
 _MODEL_RE = re.compile(r"^\s*\.model\s+(\S+)\s+(nmos|pmos)\b", re.IGNORECASE)
+# BSIM4 model-selector flags forced on load. rgatemod=1 adds an internal gate-resistance node;
+# at DC no gate current flows through it, so it does not change leakage, but it made 15 of 3,600
+# AND2/OR2 gate decks fail to converge, made ngspice report ig = 0 for most pmos_off/some nmos_on
+# transistor rows, and caused the nmos_on KCL WARN. With rgatemod=0 every deck converges and
+# id/is/ib move by <= ~1e-9 relative on the transistor data (gate leakage: ~4e-6 median).
+MODEL_OVERRIDES: dict[str, int] = {"rgatemod": 0}
+
 _SCALE = {"t": 1e12, "g": 1e9, "k": 1e3, "m": 1e-3, "u": 1e-6, "n": 1e-9, "p": 1e-12, "f": 1e-15}
 
 
@@ -98,13 +108,29 @@ def _extract(block: str, device: str, param: str) -> float:
     return parse_spice_number(hits[0][1])
 
 
+def _apply_overrides(block: str, device: str) -> str:
+    """Set each MODEL_OVERRIDES flag in `block`. A flag absent from the card is appended (BSIM4
+    would otherwise use its default); a flag present more than once is an error."""
+    for flag, value in MODEL_OVERRIDES.items():
+        block, n = _param_re(flag).subn(lambda m, v=value: m.group(1) + str(v), block)
+        if n == 0:
+            block += f"\n+{flag} = {value}"
+        elif n > 1:
+            raise ValueError(f"{device} model: '{flag}' occurs {n} times (expected at most 1)")
+    return block
+
+
 def load_model_card(path: Path | str) -> ModelCard:
-    """Parse the PTM file and pull the nominal values of constants.PROCESS_PARAMS for both devices."""
+    """Parse the PTM file and pull the nominal values of constants.PROCESS_PARAMS for both devices.
+
+    MODEL_OVERRIDES are applied to both blocks here, so all rendered decks inherit them.
+    """
     path = Path(path)
     blocks = _split_blocks(path.read_text(errors="replace"))
     missing = [d for d in DEVICES if d not in blocks]
     if missing:
         raise ValueError(f"{path}: no .model block for {missing} (expected one nmos and one pmos)")
+    blocks = {d: (name, _apply_overrides(text, d)) for d, (name, text) in blocks.items()}
     nominal = {d: {p: _extract(blocks[d][1], d, p) for p in PROCESS_PARAMS} for d in DEVICES}
     return ModelCard(
         path=path,
@@ -146,5 +172,6 @@ def dump_nominals(card: ModelCard, out_path: Path) -> None:
         "model_file": str(card.path),
         "model_names": card.model_names,
         "nominal": card.nominal,
+        "model_overrides": MODEL_OVERRIDES,
     }
     out_path.write_text(json.dumps(payload, indent=2) + "\n")

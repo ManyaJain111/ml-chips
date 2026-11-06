@@ -4,7 +4,7 @@
 .model  nmos  nmos  level = 54
 +version = 4.0             binunit = 1               paramchk= 1               mobmod  = 0
 +capmod  = 2               igcmod  = 1               igbmod  = 1               geomod  = 1
-+diomod  = 1               rdsmod  = 0               rbodymod= 1               rgatemod= 1
++diomod  = 1               rdsmod  = 0               rbodymod= 1               rgatemod= 0
 +permod  = 1               acnqsmod= 0               trnqsmod= 0
 +tnom    = 27              toxe    = 1.525992065e-09        toxp    = 1.3e-009        toxm    = 1.6e-009
 +dtox    = 3e-010          epsrox  = 3.9             wint    = 5e-009          lint    = 0
