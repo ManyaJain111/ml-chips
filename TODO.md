@@ -100,7 +100,7 @@ The generator already works. P1's job is to make the data **correct, sufficient 
 
 ### Dataset size ("smallest dataset possible", brief Part A.1)
 - [ ] Learning curve with P2 (n = 1k, 2k, 5k, 10k → validation p95 error). Pick n and justify it
-- [ ] *(optional)* smarter sampling (e.g. oversample low |Vds| or high T where the error is largest)
+- [x] Oversample low |Vds| in the ON cases (40 %, log-uniform 1e-9..1e-2 V, SPEC §4.1): gates run ON FETs at vds ≈ 0
 
 ### Speed (helps P4)
 - [ ] *(if step 10 is slow)* batch several `op` runs per ngspice process (`alter`/`altermod` in `.control`), and check that the numbers are identical to separate runs
