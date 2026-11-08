@@ -2,7 +2,11 @@
 
 Inputs:  artifacts/models/*.joblib, data/gates/gate_spice.csv (ONLY the node voltages are used),
          data/corners.csv
-Outputs: data/gates/gate_ml.csv  (SPEC §5.4)
+Outputs: data/gates/gate_ml.csv  (SPEC §5.4 + i_vdd_ml_direct)
+
+i_vdd_ml is the KCL composition (ON FETs at |vds| < ml_model.KCL_VDS_MAX get their channel
+current from KCL at the floating nodes); i_vdd_ml_direct is the plain SPEC §3.5 sum of the model
+currents, kept for comparison. Part C (GateLeakageModel) uses i_vdd_ml.
 
 The summary compares against i_vdd_spice for information only. run_gate_ml itself never sees the
 SPICE currents (hard rule 1). Exits non-zero if the output keys do not match gate_spice 1:1, or
@@ -70,7 +74,9 @@ def main(argv=None) -> None:
 
     # ---- summary (SPICE currents used for reporting only)
     j = df.merge(gate_spice[[*KEY, "i_vdd_spice"]], on=KEY, validate="1:1")
-    j["rel_err"] = (j["i_vdd_ml"] - j["i_vdd_spice"]).abs() / j["i_vdd_spice"].abs()
+    ref = j["i_vdd_spice"].abs()
+    j["rel_err"] = (j["i_vdd_ml"] - j["i_vdd_spice"]).abs() / ref
+    j["rel_err_direct"] = (j["i_vdd_ml_direct"] - j["i_vdd_spice"]).abs() / ref
     summary = (
         j.groupby("gate", sort=False)
         .agg(
@@ -79,11 +85,17 @@ def main(argv=None) -> None:
             i_vdd_ml_median=("i_vdd_ml", "median"),
             i_vdd_ml_max=("i_vdd_ml", "max"),
             median_rel_err=("rel_err", "median"),
+            median_rel_err_direct=("rel_err_direct", "median"),
         )
         .reindex(GATES)
     )
     print(f"\nrows: {len(df)} (matches gate_spice)")
     print(summary.to_string(float_format=lambda x: f"{x:.3e}"))
+    for col in ("i_vdd_ml", "i_vdd_ml_direct"):
+        n_neg = int((df[col] <= 0).sum())
+        print(
+            f"{col}: {n_neg} rows <= 0" + ("   <-- WARNING" if n_neg and col == "i_vdd_ml" else "")
+        )
     print(f"\nwrote {len(df)} rows -> {cfg.paths.gate_ml_csv}")
 
 

@@ -6,6 +6,12 @@ Procedure (SPEC §5.3):
   3. pick each FET's case (device + gate logic level) and build its INPUT_COLUMNS row from the corner
   4. TransistorModelBank.predict -> terminal currents
   5. leakage = sum of currents INTO FET terminals that sit on the vdd net
+
+Two compositions of step 5 are computed (both in gate_ml.csv):
+  - i_vdd_ml_direct: the SPEC §3.5 sum of the predicted currents as they come out of the models.
+  - i_vdd_ml (KCL):  the same sum after replacing the channel current of every ON FET that sits at
+    |vds| < KCL_VDS_MAX by the value KCL at the floating nodes (out, x, y, n1) requires. See
+    kcl_corrected_currents. This is the value Part C uses (GateLeakageModel reads i_vdd_ml).
 """
 
 from __future__ import annotations
@@ -17,7 +23,14 @@ import pandas as pd
 
 from leakml import io, sampling
 from leakml.config import ProjectConfig
-from leakml.constants import GATE_INPUT_COMBOS, INPUT_COLUMNS, NODE_GND, NODE_VDD, TARGET_COLUMNS
+from leakml.constants import (
+    GATE_INPUT_COMBOS,
+    INPUT_COLUMNS,
+    NODE_GND,
+    NODE_VDD,
+    TARGET_COLUMNS,
+    Case,
+)
 from leakml.gates.netlist import gate_widths
 from leakml.gates.topology import GateTopology, get_gate, input_levels, terminals_on
 from leakml.ml import predictor
@@ -30,7 +43,17 @@ from leakml.ml.predictor import TransistorModelBank
 #   TransistorModelBank.select_case(s)             -> Case from (device, vg, vdd)
 #   predictor.snapped_gate_voltage(case, vdd)      -> exact 0 / vdd the model was trained with
 
-# SPEC §5.4, in this order.
+# KCL composition threshold. An ON transistor inside a static gate conducts between two nodes that
+# are (almost) at the same voltage, so it carries only leakage-sized current set by the REST of the
+# gate (e.g. the off pull-down it feeds). Its |vds| there is ~1e-9..1e-7 V on 32nm_LP. The Part A
+# models were trained on vd, vs ~ U(0, VDD) and cannot resolve those currents: their absolute error
+# at vds ~ 0 (~1e-10 A) is 10-1000x the true current. Below this |vds| the channel current is
+# therefore taken from KCL instead of the model. 1 mV is far above the in-gate values (largest
+# seen: ~1e-4 V incl. AND2/OR2) and far below any genuinely biased ON device (NOR2 "10": MPB at
+# |vds| ~ 0.2 V keeps its ML current).
+KCL_VDS_MAX = 1e-3  # volts
+
+# SPEC §5.4, in this order, plus i_vdd_ml_direct (extension: the uncorrected SPEC §3.5 sum).
 GATE_ML_COLUMNS: tuple[str, ...] = (
     "gate",
     "inputs",
@@ -41,6 +64,7 @@ GATE_ML_COLUMNS: tuple[str, ...] = (
     "v_y_ml",
     "v_n1_ml",
     "max_vg_snap_err",
+    "i_vdd_ml_direct",
 )
 NODE_ML_COLUMNS: dict[str, str] = {"x": "v_x_ml", "y": "v_y_ml", "n1": "v_n1_ml"}
 # The ONLY gate_spice.csv columns step 08 may read (hard rule 1: never the SPICE currents).
@@ -139,6 +163,80 @@ def _leakage_arrays(
     return i_vdd, np.broadcast_to(np.asarray(i_in, dtype=float), i_vdd.shape).copy()
 
 
+def _kcl_arrays(
+    gate: GateTopology,
+    current: Callable[[int, str], np.ndarray],
+    free: np.ndarray,
+) -> dict[int, dict[str, np.ndarray]]:
+    """Per-FET currents {fet_index: {"id"|"ig"|"is"|"ib": array}} after the KCL correction.
+
+    free[k, r] marks FET k in row r as an ON device at |vds| < KCL_VDS_MAX. For those FETs the
+    model's ig and ib are kept, id is the unknown, and is = -(id + ig + ib) (KCL of the FET
+    itself). The unknowns are fixed by KCL at every floating node (out + internal nodes): the
+    currents into all FET terminals on that node sum to zero. All other FETs keep their model
+    currents unchanged.
+
+    Rows with the same `free` pattern share one matrix A (nodes x free FETs) and are solved
+    together with the Moore-Penrose pseudo-inverse: the least-squares, minimum-norm solution.
+      - More equations than unknowns (a node with no free FET): that node's ML residual stays,
+        the other nodes are solved in the least-squares sense.
+      - More unknowns than equations (ON FETs in parallel, e.g. both PMOS of NAND2 "00" between
+        vdd and out): only their SUM is determined, and the minimum-norm choice splits it equally.
+        Any other split differs by a null-space vector of A, i.e. a current circulating round the
+        loop the parallel FETs form. Such a loop enters and leaves vdd equally, so i_vdd does not
+        depend on the split. This is CHECKED for every pattern (ValueError otherwise), which can
+        only fail for a gate with an all-ON path from vdd to ground, i.e. not static CMOS.
+    """
+    nfet = len(gate.fets)
+    out = {
+        k: {f"i{t}": np.array(current(k, f"i{t}"), dtype=float) for t in "dgsb"}
+        for k in range(nfet)
+    }
+    if not free.any():
+        return out
+    nodes = [gate.output, *gate.internal_nodes]
+    index = {f.name: k for k, f in enumerate(gate.fets)}
+    patterns, inverse = np.unique(free.T, axis=0, return_inverse=True)
+    for p, pattern in enumerate(patterns):
+        fk = [int(k) for k in np.flatnonzero(pattern)]
+        if not fk:
+            continue
+        rows = np.flatnonzero(inverse.ravel() == p)
+        col = {k: j for j, k in enumerate(fk)}
+        A = np.zeros((len(nodes), len(fk)))
+        R = np.zeros((len(nodes), len(rows)))
+        for i, node in enumerate(nodes):
+            for f, t in terminals_on(gate, node):
+                k = index[f.name]
+                if k in col and t == "d":
+                    A[i, col[k]] += 1.0
+                elif k in col and t == "s":  # is = -(id + ig + ib)
+                    A[i, col[k]] -= 1.0
+                    R[i] += out[k]["ig"][rows] + out[k]["ib"][rows]
+                else:
+                    R[i] -= out[k][f"i{t}"][rows]
+        # i_vdd sensitivity to each unknown id: +1 if the drain is on vdd, -1 if the source is
+        c_vdd = np.array([(gate.fets[k].d == NODE_VDD) - (gate.fets[k].s == NODE_VDD) for k in fk])
+        _u, sv, vt = np.linalg.svd(A)
+        rank = int((sv > 1e-9 * max(sv.max(initial=0.0), 1.0)).sum())
+        null = vt[rank:]
+        if null.size and np.abs(null @ c_vdd).max() > 1e-9:
+            raise ValueError(
+                f"{gate.name}: ON FETs {[gate.fets[k].name for k in fk]} form a vdd-to-ground "
+                "path; the KCL split would change i_vdd"
+            )
+        D = np.linalg.pinv(A) @ R
+        for j, k in enumerate(fk):
+            out[k]["id"][rows] = D[j]
+            out[k]["is"][rows] = -(D[j] + out[k]["ig"][rows] + out[k]["ib"][rows])
+    return out
+
+
+def _free_mask(cases: Sequence, vd: np.ndarray, vs: np.ndarray) -> np.ndarray:
+    on = np.array([Case(c) in (Case.NMOS_ON, Case.PMOS_ON) for c in cases])
+    return on & (np.abs(np.asarray(vd, dtype=float) - np.asarray(vs, dtype=float)) < KCL_VDS_MAX)
+
+
 # ------------------------------------------------------------------ single case (SPEC §5.3)
 
 
@@ -217,6 +315,30 @@ def leakage_from_currents(
     return {"i_vdd_ml": float(i_vdd[0]), "i_in_ml": float(i_in[0])}
 
 
+def kcl_corrected_currents(
+    gate: GateTopology, fet_currents: pd.DataFrame, X: pd.DataFrame, cases: Sequence
+) -> pd.DataFrame:
+    """Per-FET currents after the KCL correction (see _kcl_arrays and KCL_VDS_MAX).
+
+    fet_currents: id, ig, is, ib per FET (as from bank.predict on fet_feature_rows output);
+    X, cases: that fet_feature_rows output (vd, vs pick the ON devices at |vds| < KCL_VDS_MAX).
+    Both in gate.fets order or indexed by FET name. leakage_from_currents(gate, <result>, inputs)
+    then gives the KCL i_vdd_ml.
+    """
+    names = [f.name for f in gate.fets]
+    cur = fet_currents.loc[names] if set(fet_currents.index) >= set(names) else fet_currents
+    Xn = X.loc[names] if set(X.index) >= set(names) else X
+    if len(cur) != len(names) or len(Xn) != len(names) or len(cases) != len(names):
+        raise ValueError(f"{gate.name}: expected {len(names)} FET rows ({names})")
+    free = _free_mask(cases, Xn["vd"].to_numpy(), Xn["vs"].to_numpy())[:, None]
+    fixed = _kcl_arrays(gate, lambda k, t: np.array([float(cur[t].iloc[k])]), free)
+    return pd.DataFrame(
+        [[fixed[k][t][0] for t in TARGET_COLUMNS] for k in range(len(names))],
+        index=pd.Index(names, name="fet"),
+        columns=list(TARGET_COLUMNS),
+    )
+
+
 def predict_gate_leakage(
     gate: GateTopology,
     inputs: str,
@@ -226,13 +348,19 @@ def predict_gate_leakage(
     cfg: ProjectConfig,
 ) -> dict[str, float]:
     """One (gate, inputs, corner): resolve_node_voltages -> fet_feature_rows -> bank.predict ->
-    leakage_from_currents. Returns {"i_vdd_ml", "i_in_ml", "max_vg_snap_err"}."""
+    leakage_from_currents. Returns {"i_vdd_ml" (KCL), "i_in_ml", "max_vg_snap_err",
+    "i_vdd_ml_direct" (SPEC §3.5 sum of the raw predictions)}."""
     node_v = resolve_node_voltages(gate, inputs, float(corner["vdd"]), recorded_node_v)
     X, cases = fet_feature_rows(gate, inputs, corner, node_v, cfg)
     currents = bank.predict(X, cases)
-    out = leakage_from_currents(gate, currents, inputs)
-    out["max_vg_snap_err"] = float(max(X.attrs[SNAP_ERR_ATTR]))
-    return out
+    direct = leakage_from_currents(gate, currents, inputs)
+    kcl = leakage_from_currents(gate, kcl_corrected_currents(gate, currents, X, cases), inputs)
+    return {
+        "i_vdd_ml": kcl["i_vdd_ml"],
+        "i_in_ml": direct["i_in_ml"],  # ig is never corrected, so both methods agree
+        "max_vg_snap_err": float(max(X.attrs[SNAP_ERR_ATTR])),
+        "i_vdd_ml_direct": direct["i_vdd_ml"],
+    }
 
 
 # ------------------------------------------------------------------ all cases, vectorised
@@ -268,8 +396,9 @@ def run_gate_ml(
     never its currents (hard rule 1). VDD, temperature and process parameters come from
     `corners`, by corner_id. All FET rows of all cases are built first, bank.predict is called
     ONCE, and the currents are summed back per case. Output: GATE_ML_COLUMNS, one row per
-    gate_spice row, same order; v_<node>_ml equal the SPICE values in "spice" mode (NaN where the
-    gate lacks the node).
+    gate_spice row, same order; i_vdd_ml is the KCL composition, i_vdd_ml_direct the plain
+    SPEC §3.5 sum; v_<node>_ml equal the SPICE values in "spice" mode (NaN where the gate lacks
+    the node).
     """
     _check_spice_mode(cfg)
     gs = gate_spice.loc[:, _KEY + list(_RECORDED_COLUMNS.values())].reset_index(drop=True)
@@ -293,7 +422,7 @@ def run_gate_ml(
 
     X_parts: list[pd.DataFrame] = []
     case_parts: list = []
-    groups = []  # (gate, bits, row positions, [(start, stop) per FET], snap errors)
+    groups = []  # (gate, bits, row positions, [(start, stop) per FET], snap errors, free mask)
     offset = 0
     for (g, bits), pos in gs.groupby(["gate", "inputs"], sort=False).indices.items():
         gate = get_gate(g)
@@ -315,18 +444,24 @@ def run_gate_ml(
             spans.append((offset, offset + len(X)))
             offset += len(X)
         snap = np.max(np.vstack([b[2] for b in blocks]), axis=0)
-        groups.append((gate, bits, pos, spans, snap))
+        free = np.vstack([_free_mask(c, X["vd"], X["vs"]) for X, c, _ in blocks])
+        groups.append((gate, bits, pos, spans, snap, free))
 
     X_all = pd.concat(X_parts, ignore_index=True)
     I_all = bank.predict(X_all, case_parts)  # ONE batched call for every FET of every case
     I_np = {t: I_all[t].to_numpy(dtype=float) for t in TARGET_COLUMNS}
 
     out = pd.DataFrame(index=gs.index, columns=list(GATE_ML_COLUMNS[3:]), dtype=float)
-    for gate, bits, pos, spans, snap in groups:
-        i_vdd, i_in = _leakage_arrays(
-            gate, bits, lambda k, t, spans=spans: I_np[t][spans[k][0] : spans[k][1]]
-        )
+    for gate, bits, pos, spans, snap, free in groups:
+
+        def raw(k: int, t: str, spans=spans) -> np.ndarray:
+            return I_np[t][spans[k][0] : spans[k][1]]
+
+        i_vdd_direct, i_in = _leakage_arrays(gate, bits, raw)
+        fixed = _kcl_arrays(gate, raw, free)
+        i_vdd, _ = _leakage_arrays(gate, bits, lambda k, t, fixed=fixed: fixed[k][t])
         out.iloc[pos, out.columns.get_loc("i_vdd_ml")] = i_vdd
+        out.iloc[pos, out.columns.get_loc("i_vdd_ml_direct")] = i_vdd_direct
         out.iloc[pos, out.columns.get_loc("i_in_ml")] = i_in
         out.iloc[pos, out.columns.get_loc("max_vg_snap_err")] = snap
         for node, col in NODE_ML_COLUMNS.items():
