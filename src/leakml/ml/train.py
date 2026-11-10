@@ -31,7 +31,7 @@ from leakml.metrics import summarize
 from leakml.ml import zoo
 from leakml.ml.features import TargetTransform, build_features
 from leakml.ml.predictor import input_ranges, save_bundle
-from leakml.ml.regressor import TransistorRegressor
+from leakml.ml.regressor import TransistorRegressor, is_from_kcl
 
 log = logging.getLogger(__name__)
 
@@ -55,14 +55,28 @@ class FitResult:
     train_ranges: dict[str, list[float]] = field(default_factory=dict)  # raw-input ranges
     n_train: int = 0
     search: pd.DataFrame = field(default_factory=pd.DataFrame)  # one row per grid point
+    is_kcl: bool = False  # is = -(id + ig + ib) instead of the direct prediction
 
     def regressor(self) -> TransistorRegressor:
         return TransistorRegressor(
-            self.case, self.estimator, self.target_transform, self.feature_names, self.nominal
-        )
+            self.case, self.estimator, self.target_transform, self.feature_names, self.nominal,
+            is_kcl=getattr(self, "is_kcl", False),
+        )  # fmt: skip
 
     def score(self, metric: str = "p95_err_pct") -> float:
         return _score(self.val_metrics, metric)
+
+
+_SEARCH_META = ("is_kcl", "median_err_pct", "fit_s")
+
+
+def n_grid_points(search: pd.DataFrame) -> int:
+    """Number of distinct hyperparameter settings in a FitResult.search table (1 = untuned).
+
+    The table has one row per (grid point, is_kcl variant) plus score columns, so count the
+    distinct hyperparameter combinations only."""
+    hp = [c for c in search.columns if c not in _SEARCH_META and not c.endswith("_pct")]
+    return len(search[hp].astype(str).drop_duplicates()) if hp else 1
 
 
 def _score(metrics: pd.DataFrame, metric: str) -> float:
@@ -92,12 +106,15 @@ def fit_one(
     tune: bool = True,
     selection_metric: str = "p95_err_pct",
     shape_channel: bool | None = None,
+    is_kcl: bool | None = None,
 ) -> FitResult:
     """Fit one model type on one case and score it on the validation split.
 
     With tune=True every point of zoo.search_space(model_name) is fitted on TRAIN and scored on
     VAL (selection_metric averaged over targets); the best point is kept. The test split is never
     read here. shape_channel=None means "on for the ON cases" (see features.TargetTransform).
+    is_kcl=None scores every grid point twice on VAL, with is predicted directly and with
+    is = -(id + ig + ib) (regressor.is_from_kcl), and keeps the better variant; True/False force it.
     """
     case = Case(case)
     train, val = splits["train"], splits["val"]
@@ -120,18 +137,25 @@ def fit_one(
         t0 = time.perf_counter()
         est = zoo.make_model(model_name, seed, **overrides).fit(X_tr, Z_tr)
         dt = time.perf_counter() - t0
-        pred = tt.inverse_transform(est.predict(X_va), val)
-        m = _target_metrics(pred, val[targets], i_floor)
-        score = _score(m, selection_metric)
-        med = _score(m, "median_err_pct")
-        rows.append({**overrides, selection_metric: score, "median_err_pct": med, "fit_s": dt})
-        log.info("%s %s %s: val %s %.4g (%.1fs)", case.value, model_name, overrides,
-                 selection_metric, score, dt)  # fmt: skip
-        if best is None or (score, med) < (best[0], best[1]):
-            best = (score, med, overrides, est, m, dt)
+        direct = tt.inverse_transform(est.predict(X_va), val)
+        variants = [False, True] if is_kcl is None else [bool(is_kcl)]
+        for kcl in variants:
+            pred = direct
+            if kcl:
+                pred = pd.DataFrame(is_from_kcl(direct.to_numpy()), index=val.index,
+                                    columns=targets)  # fmt: skip
+            m = _target_metrics(pred, val[targets], i_floor)
+            score = _score(m, selection_metric)
+            med = _score(m, "median_err_pct")
+            rows.append({**overrides, "is_kcl": kcl, selection_metric: score,
+                         "median_err_pct": med, "fit_s": dt})  # fmt: skip
+            log.info("%s %s %s is_kcl=%s: val %s %.4g (%.1fs)", case.value, model_name,
+                     overrides, kcl, selection_metric, score, dt)  # fmt: skip
+            if best is None or (score, med) < (best[0], best[1]):
+                best = (score, med, overrides, est, m, dt, kcl)
 
     assert best is not None
-    _, _, overrides, est, m, dt = best
+    _, _, overrides, est, m, dt, kcl = best
     hp = zoo.default_hyperparams(model_name)
     hp.update(overrides)
     return FitResult(
@@ -147,6 +171,7 @@ def fit_one(
         train_ranges=input_ranges(train),
         n_train=len(train),
         search=pd.DataFrame(rows),
+        is_kcl=kcl,
     )
 
 
@@ -271,6 +296,7 @@ def save_model(
                              "i0": [float(x) for x in (best.target_transform.i0_
                                                        if best.target_transform.i0_ is not None
                                                        else [])]},
+        "is_kcl": bool(getattr(best, "is_kcl", False)),
         "train_ranges": best.train_ranges,
         "n_train": best.n_train,
         "val_metrics": best.val_metrics.to_dict("records"),

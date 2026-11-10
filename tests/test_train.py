@@ -69,7 +69,7 @@ def test_fit_one_never_reads_test(splits):
 
 def test_tuning_picks_best_grid_point(splits):
     r = train.fit_one(Case.NMOS_OFF, "poly_ridge", splits, seed=7, nominal=NOMINAL, tune=True)
-    assert len(r.search) == 6  # 2 degrees x 3 alphas
+    assert train.n_grid_points(r.search) == 6  # 2 degrees x 3 alphas
     assert r.score() == pytest.approx(r.search["p95_err_pct"].min())
 
 
@@ -141,3 +141,33 @@ def test_shape_channel_default_is_on_cases_only(splits):
     assert forced.target_transform.shape_channel
     X = splits["val"]
     assert np.isfinite(on.regressor().predict(X)).all()
+
+
+def test_is_from_kcl_enforces_kirchhoff():
+    from leakml.ml.regressor import is_from_kcl
+
+    Y = np.array([[1e-12, 2e-15, 5e-13, -3e-14], [-4e-12, 1e-16, 0.0, 2e-14]])
+    out = is_from_kcl(Y)
+    scale = np.abs(Y).max(axis=1)
+    assert (np.abs(out.sum(axis=1)) <= 1e-12 * scale).all()  # zero up to rounding
+    np.testing.assert_array_equal(out[:, [0, 1, 3]], Y[:, [0, 1, 3]])  # only is changes
+    assert Y[0, 2] == 5e-13  # input untouched
+
+
+def test_is_kcl_chosen_on_val_and_saved(splits, tmp_path):
+    auto = train.fit_one(Case.NMOS_OFF, "poly_ridge", splits, seed=7, **FAST)
+    assert set(auto.search["is_kcl"]) == {False, True}  # both variants scored
+    assert train.n_grid_points(auto.search) == 1  # untuned: still one grid point
+    best_row = auto.search.loc[auto.search["p95_err_pct"].idxmin()]
+    assert auto.is_kcl == bool(best_row["is_kcl"])
+    forced = train.fit_one(Case.NMOS_OFF, "poly_ridge", splits, seed=7, is_kcl=True, **FAST)
+    assert forced.is_kcl and set(forced.search["is_kcl"]) == {True}
+    P = forced.regressor().predict(splits["val"])
+    assert (np.abs(P.sum(axis=1)) <= 1e-12 * np.abs(P).max(axis=1)).all()  # KCL holds
+    train.save_model(forced, tmp_path / "m.joblib")
+    assert joblib.load(tmp_path / "m.joblib")["meta"]["is_kcl"] is True
+
+
+def test_n_grid_points_counts_hyperparams_not_variants(splits):
+    r = train.fit_one(Case.NMOS_OFF, "poly_ridge", splits, seed=7, nominal=NOMINAL, tune=True)
+    assert train.n_grid_points(r.search) == 6 and len(r.search) == 12

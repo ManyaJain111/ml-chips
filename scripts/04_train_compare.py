@@ -29,7 +29,12 @@ from leakml.constants import CASE_DEVICE, CASES, Case
 from leakml.data.generate import load_dataset
 from leakml.ml import zoo
 from leakml.ml.split import save_split_indices, split_dataset
-from leakml.ml.train import compare_models, comparison_summary, comparison_table
+from leakml.ml.train import (
+    compare_models,
+    comparison_summary,
+    comparison_table,
+    n_grid_points,
+)
 
 
 def parse_args(argv=None):
@@ -80,7 +85,7 @@ def main(argv=None) -> None:
             print(
                 f"   {r.model_name:13} val p95 {r.score('p95_err_pct'):8.3g} %   "
                 f"median {r.score('median_err_pct'):7.3g} %   fit {r.fit_seconds:6.1f} s   "
-                f"{len(r.search)} grid point(s)"
+                f"{n_grid_points(r.search)} grid point(s)   is_kcl={r.is_kcl}"
             )
         results[case] = fits
 
