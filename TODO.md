@@ -115,15 +115,16 @@ The generator already works. P1's job is to make the data **correct, sufficient 
 `metrics.py` and the predictor API are done. Start on dev data now:
 `make data CONFIG=configs/dev.yaml` (2000 rows/case, about 1 min) or the QUICK=1 pilot.
 
-- [ ] `ml/split.py`: split + save/load indices
-- [ ] `ml/features.py`: `build_features` (physics features, PMOS sign-flip), `TargetTransform` (log|I| + sign, or asinh). Justify the choice
-- [ ] `ml/zoo.py`: 4 model types, defaults, small search spaces
-- [ ] `ml/train.py`: `fit_one`, `compare_models`, `comparison_table`, `select_best`, `evaluate_on_test`, `save_model`
-      **Save with `predictor.save_bundle`**, and put the regressor wrapper class in `leakml/ml/` (see `ml/baseline.py`)
-- [ ] `scripts/04_train_compare.py` → D4 table (4 models × 4 cases, R², median, p95 on **val**)
-- [ ] `scripts/05_finalize_models.py` → D5 (test median/p95, pred-vs-SPICE plots with `plotting.parity_axes`, 4 model files)
-- [ ] Hand P3 a first real bank as early as possible, even on dev data: `make train finalize CONFIG=configs/dev.yaml`
-- [ ] Learning curve together with P1. Look at the worst-predicted samples (low Vds? high T? `is` vs `id`?)
+- [x] `ml/split.py`: split + save/load indices (written by P1)
+- [x] `ml/features.py`: `build_features` (physics features, PMOS sign-flip), `TargetTransform` (log|I| + sign, or asinh). Justify the choice
+- [x] `ml/zoo.py`: 4 model types, defaults, small search spaces
+- [x] `ml/train.py`: `fit_one`, `compare_models`, `comparison_table`, `select_best`, `evaluate_on_test`, `save_model`
+      **Save with `predictor.save_bundle`**, and put the regressor wrapper class in `leakml/ml/` (see `ml/baseline.py`) → `ml/regressor.py`
+- [x] `scripts/04_train_compare.py` → D4 table (4 models × 4 cases, R², median, p95 on **val**)
+- [x] `scripts/05_finalize_models.py` → D5 (test median/p95, pred-vs-SPICE plots with `plotting.parity_axes`, 4 model files)
+- [x] Hand P3 a first real bank as early as possible: tuned models on 32nm_LP in `artifacts/models/`
+- [ ] Improve accuracy: test mean accuracy is 73–96 % per current vs the ≥ 99 % target. Look at the worst-predicted samples (low Vds? high T? `is` vs `id`? the ~1e-14 A floor in OFF `id`)
+- [ ] Learning curve together with P1 (P1 can call `train.fit_one` on nested subsets with the chosen model per case)
 - [ ] Report: *Models*; the Part A part of *Error analysis*; *Limitations and improvements* (lead)
 
 ---
