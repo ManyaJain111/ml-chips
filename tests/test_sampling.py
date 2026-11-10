@@ -17,6 +17,9 @@ from leakml.sampling import (
     LOW_VDS_CASES,
     LOW_VDS_FRAC,
     LOW_VDS_RANGE,
+    SOURCE_PIN_CASES,
+    SOURCE_PIN_FRAC,
+    SOURCE_PIN_RANGE,
     corner_process_params,
     draw_corners,
     draw_transistor_samples,
@@ -96,3 +99,30 @@ def test_low_vds_keeps_uniform_rows(dev_cfg, card):
     keep = (on.vd - on.vs).abs() > LOW_VDS_RANGE[1]
     for col in ("vdd", "vd", "vs", "w", "temp", *PROCESS_PARAMS):
         assert np.array_equal(on.loc[keep, col], off.loc[keep, col]), col
+
+
+@pytest.mark.parametrize("case", CASES)
+def test_off_source_pinning(case, dev_cfg, card):
+    df = draw_transistor_samples(case, 4000, dev_cfg, card, make_rng(5, case.value))
+    nmos = case.value.startswith("nmos")
+    offset = df.vs if nmos else df.vdd - df.vs  # distance of the source from its own rail
+    exact_vs = np.array([float(format_number(v)) == v for v in df.vs])
+    pinned = exact_vs & (offset >= 0.9 * SOURCE_PIN_RANGE[0]) & (offset <= SOURCE_PIN_RANGE[1])
+    if case in SOURCE_PIN_CASES:
+        assert pinned.mean() == pytest.approx(SOURCE_PIN_FRAC, abs=0.04)
+        assert offset[pinned].min() < 1e-8 and offset[pinned].max() > 1e-2  # spans the decades
+        assert ((df.vs >= 0) & (df.vs <= df.vdd)).all()
+        assert np.allclose(df.vb, 0.0 if nmos else df.vdd)  # pinned source sits at the body
+        vds = (df.vd - df.vs).abs()[pinned]
+        assert vds.max() > 0.8 * df.vdd.max()  # vd stays uniform: full |vds| is covered
+    else:
+        assert (offset <= SOURCE_PIN_RANGE[1]).mean() < 0.2  # ON cases: no pinning
+
+
+def test_source_pinning_keeps_other_rows(dev_cfg, card):
+    """Pinning is drawn after everything else: only vs of the pinned rows changes."""
+    ref = draw_transistor_samples("nmos_on", 500, dev_cfg, card, make_rng(4, "x"))
+    off = draw_transistor_samples("nmos_off", 500, dev_cfg, card, make_rng(4, "x"))
+    for col in ("vdd", "vd", "w", "temp", *PROCESS_PARAMS):
+        same = (ref.vd - ref.vs).abs() > LOW_VDS_RANGE[1]  # ON rows the low-Vds draw left alone
+        assert np.array_equal(ref.loc[same, col], off.loc[same, col]), col

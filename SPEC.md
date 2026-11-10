@@ -98,6 +98,14 @@ rows with |vds| < 1 mV). In `nmos_on` and `pmos_on`, a random 40 % of rows
 rounded to the deck's 10 significant digits so the stored inputs equal the simulated ones. These
 draws come after all others, so the uniform rows and the OFF cases are unchanged.
 
+**Source pinning (OFF cases only).** Inside a gate an OFF FET sits with its source on its own
+rail (NMOS: 0, PMOS: vdd, i.e. at its body) and the drain up to the other rail; stacked OFF FETs
+see a small source offset. Uniform vd, vs put fewer than 1 % of rows near that point. In
+`nmos_off` and `pmos_off`, a random 40 % of rows (`sampling.SOURCE_PIN_FRAC`) instead get
+`vs` = rail ± offset, offset log-uniform in [1e-9, 1e-1] V (`SOURCE_PIN_RANGE`), towards the inside
+of [0, vdd], rounded to the deck's 10 significant digits; `vd` stays uniform. Drawn after all
+others, so the other rows and the ON cases are unchanged.
+
 | Case | vg | vb |
 |---|---|---|
 | `nmos_on` | VDD | 0 |
