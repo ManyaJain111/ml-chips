@@ -60,7 +60,7 @@
 +rbps    = 15              rbdb    = 15              rbsb    = 15              ngcon   = 1
 Vd d 0 dc 0.4001184292
 Vg g 0 dc 0.8545400635
-Vs s 0 dc 0.7726170568
+Vs s 0 dc 0.8544817735
 Vb b 0 dc 0.8545400635
 M1 d g s b pmos W=3.893969504e-08 L=3.2e-08
 .control
