@@ -84,11 +84,27 @@ Per case: `n_samples_per_case` (default 10,000) rows, every parameter independen
 | Parameter | Distribution |
 |---|---|
 | `vdd` | U(0.9·VDDnom, 1.1·VDDnom) |
-| `vd`, `vs` | U(0, vdd), using that row's vdd |
+| `vd`, `vs` | U(0, vdd), using that row's vdd (ON cases: see low-\|Vds\| note below) |
 | `w` | U(1, 8) · Lmin |
 | `temp` | U(−40, 125) °C |
 | `vth0, toxe, ndep, u0, xj` | nominal·(1 + U(−0.1, 0.1)), nominals parsed from the device's `.model` block. PMOS `vth0` is negative and keeps its sign |
 | `vg`, `vb` | fixed by the case (table below), `vdd` = that row's vdd |
+
+**Low-|Vds| oversampling (ON cases only).** Inside a gate every ON FET sits at |vds| ≈ 1e-7 V
+(drain and source pulled to the same rail), which uniform vd, vs almost never produce (~0.2 % of
+rows with |vds| < 1 mV). In `nmos_on` and `pmos_on`, a random 40 % of rows
+(`sampling.LOW_VDS_FRAC`) instead get `vd = vs ± |vds|` with |vds| log-uniform in [1e-9, 1e-2] V
+(`LOW_VDS_RANGE`) and a random sign, reflected to stay in [0, vdd]. vd and vs of these rows are
+rounded to the deck's 10 significant digits so the stored inputs equal the simulated ones. These
+draws come after all others, so the uniform rows and the OFF cases are unchanged.
+
+**Source pinning (OFF cases only).** Inside a gate an OFF FET sits with its source on its own
+rail (NMOS: 0, PMOS: vdd, i.e. at its body) and the drain up to the other rail; stacked OFF FETs
+see a small source offset. Uniform vd, vs put fewer than 1 % of rows near that point. In
+`nmos_off` and `pmos_off`, a random 40 % of rows (`sampling.SOURCE_PIN_FRAC`) instead get
+`vs` = rail ± offset, offset log-uniform in [1e-9, 1e-1] V (`SOURCE_PIN_RANGE`), towards the inside
+of [0, vdd], rounded to the deck's 10 significant digits; `vd` stays uniform. Drawn after all
+others, so the other rows and the ON cases are unchanged.
 
 | Case | vg | vb |
 |---|---|---|
