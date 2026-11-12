@@ -15,8 +15,22 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from leakml.constants import INPUT_COLUMNS, Case
+from leakml.constants import INPUT_COLUMNS, TARGET_COLUMNS, Case
 from leakml.ml.features import TargetTransform, build_features
+
+_I = {t: TARGET_COLUMNS.index(t) for t in TARGET_COLUMNS}
+
+
+def is_from_kcl(Y: np.ndarray) -> np.ndarray:
+    """Copy of Y (n, 4, TARGET_COLUMNS order) with is replaced by -(id + ig + ib).
+
+    Kirchhoff: the four terminal currents of a FET sum to zero. id and ib are predicted much more
+    accurately than is (in the OFF cases is is tiny and changes sign), so deriving is from them
+    can beat predicting it directly. fit_one decides per case on validation.
+    """
+    Y = np.array(Y, dtype=float, copy=True)
+    Y[:, _I["is"]] = -(Y[:, _I["id"]] + Y[:, _I["ig"]] + Y[:, _I["ib"]])
+    return Y
 
 
 class TransistorRegressor:
@@ -29,8 +43,10 @@ class TransistorRegressor:
         target_transform: TargetTransform,
         feature_names: list[str],
         nominal: dict[str, float] | None = None,
+        is_kcl: bool = False,
     ):
         self.case = Case(case)
+        self.is_kcl = bool(is_kcl)
         self.estimator = estimator
         self.target_transform = target_transform
         self.feature_names = list(feature_names)
@@ -51,7 +67,9 @@ class TransistorRegressor:
         Z = np.asarray(self.estimator.predict(self.features(X)), dtype=float)
         if Z.ndim == 1:
             Z = Z.reshape(-1, 1)
-        return self.target_transform.inverse_transform(Z, X).to_numpy()
+        Y = self.target_transform.inverse_transform(Z, X).to_numpy()
+        # getattr: models pickled before is_kcl existed predict is directly
+        return is_from_kcl(Y) if getattr(self, "is_kcl", False) else Y
 
     def __repr__(self) -> str:
         return f"TransistorRegressor({self.case.value}, {type(self.estimator).__name__})"

@@ -24,7 +24,7 @@ from leakml.constants import CASES, INPUT_COLUMNS
 from leakml.data.generate import load_dataset
 from leakml.ml.predictor import TransistorModelBank
 from leakml.ml.split import load_split_indices
-from leakml.ml.train import evaluate_on_test, save_model, select_best
+from leakml.ml.train import evaluate_on_test, n_grid_points, save_model, select_best
 
 
 def parse_args(argv=None):
@@ -57,8 +57,8 @@ def main(argv=None) -> None:
             f"{r.model_name} val {metric} {r.score(metric):.3g} / median "
             f"{r.score('median_err_pct'):.3g}" for r in ranking
         )  # fmt: skip
-        tuned = len(best.search) > 1
-        print(f"{case.value:9} -> {best.model_name}  ({reason})")
+        tuned = n_grid_points(best.search) > 1
+        print(f"{case.value:9} -> {best.model_name}  is_kcl={best.is_kcl}  ({reason})")
 
         df = load_dataset(case, cfg)
         test = df.loc[load_split_indices(cfg.paths.split_file(case))["test"]]
@@ -77,7 +77,7 @@ def main(argv=None) -> None:
             },
         )  # fmt: skip
         chosen_rows.append({
-            "case": case.value, "model": best.model_name, "tuned": tuned,
+            "case": case.value, "model": best.model_name, "tuned": tuned, "is_kcl": best.is_kcl,
             f"val_{metric}": best.score(metric), "val_median_err_pct": best.score("median_err_pct"),
             "hyperparams": str(best.hyperparams), "ranking": reason,
         })  # fmt: skip
