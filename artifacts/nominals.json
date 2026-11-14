@@ -1,5 +1,5 @@
 {
-  "model_file": "/home/manya/ml-chips/pdk/32nm_LP.pm",
+  "model_file": "/home/gopal/Coursework/dvd/project/pdk/32nm_LP.pm",
   "model_names": {
     "nmos": "nmos",
     "pmos": "pmos"
