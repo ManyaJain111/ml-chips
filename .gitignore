@@ -26,3 +26,6 @@ artifacts/_dev*/
 
 # NOTE: data/, artifacts/ and results/ ARE tracked on purpose: they are deliverables.
 # If artifacts/models/*.joblib grow past ~50 MB, switch them to git-lfs instead of ignoring them.
+
+# training by-product (hundreds of MB), not a deliverable
+artifacts/candidates/

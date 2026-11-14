@@ -233,12 +233,31 @@ For each (gate, inputs, corner):
 2. Per FET: (vd, vg, vs, vb) from its nodes, case from (device, gate logic level), `vg` snapped to
    0/VDD, W from the sizing, and temp/vdd/process params from the corner (n_* or p_*).
 3. One batched `bank.predict` call for all FETs of all 3,600 cases.
-4. `i_vdd_ml` and `i_in_ml` per §3.5.
+4. `i_vdd_ml` and `i_in_ml` per §3.5, after the KCL correction below (`i_vdd_ml_direct` is the
+   same sum without it).
+
+**KCL correction (`kcl_corrected_currents`, `KCL_VDS_MAX = 1e-3` V).** An ON FET inside a static
+gate sits between two nodes at almost the same voltage (|vds| ~ 1e-9..1e-4 V on 32nm_LP) and carries
+only leakage-sized current set by the rest of the gate. The Part A models were trained on
+vd, vs ~ U(0, VDD) and cannot resolve that current: their absolute error at vds ~ 0 is 10-1000x the
+true value. So, for every ON FET (`nmos_on`/`pmos_on`) with |vd - vs| < `KCL_VDS_MAX`:
+- the model's `ig` and `ib` are kept; `id` is the unknown and `is = -(id + ig + ib)`;
+- the unknown `id`s are solved from KCL at the floating nodes (`out`, `x`, `y`, `n1`): the currents
+  into all FET terminals on each node sum to zero. Every other FET keeps its model currents.
+- Rows with the same pattern of corrected FETs are solved together with the pseudo-inverse
+  (least-squares, minimum-norm). For ON FETs in parallel (e.g. both PMOS of NAND2 `00`) only their
+  sum is determined, and the minimum-norm solution splits it equally. Any other split differs by a
+  current circulating in the parallel loop, which does not change `i_vdd`. This is checked for every
+  pattern (`ValueError` otherwise, which can only happen with an all-ON vdd-to-ground path).
+1 mV is far above any in-gate ON |vds| and far below a genuinely biased ON device (NOR2 `10`: MPB at
+|vds| ~ 0.2 V keeps its ML current). `i_in_ml` is unchanged, because `ig` is never corrected.
+`i_vdd_ml` (KCL) is the value used for Part B results and by `GateLeakageModel` in Part C.
 
 ### 5.4 Gate result schema
 `data/gates/gate_spice.csv`: `gate, inputs, corner_id, vdd, temp, i_vdd_spice, i_in_spice,
 v_out_spice, v_x_spice, v_y_spice, v_n1_spice, logic_ok`. Missing nodes are NaN.
 `data/gates/gate_ml.csv`: `gate, inputs, corner_id, i_vdd_ml, i_in_ml, v_x_ml, v_y_ml, v_n1_ml, max_vg_snap_err`.
+It also has an extra last column `i_vdd_ml_direct`, the §3.5 sum without the KCL correction (§5.3), kept for comparison.
 `data/gates/gate_results.csv`: 1:1 join on `(gate, inputs, corner_id)`, exactly 3,600 rows.
 
 ### 5.5 Stretch: ML-solved internal nodes
