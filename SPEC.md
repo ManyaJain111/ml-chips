@@ -79,7 +79,8 @@ by those inputs. Recorded so the definition can be switched if the TAs want tota
 ## 4. Part A: transistor models
 
 ### 4.1 Sampling (`leakml.sampling`)
-Per case: `n_samples_per_case` (default 10,000) rows, every parameter independent, **VDD first**:
+Per case: `n_samples_per_case` (30,000; was 10,000, raised after the learning curve showed the
+error still falling at 7k training rows) rows, every parameter independent, **VDD first**:
 
 | Parameter | Distribution |
 |---|---|
@@ -105,6 +106,17 @@ see a small source offset. Uniform vd, vs put fewer than 1 % of rows near that p
 `vs` = rail ± offset, offset log-uniform in [1e-9, 1e-1] V (`SOURCE_PIN_RANGE`), towards the inside
 of [0, vdd], rounded to the deck's 10 significant digits; `vd` stays uniform. Drawn after all
 others, so the other rows and the ON cases are unchanged.
+
+**Boundary oversampling (all cases).** Tree models are least accurate near the edges of the sampled
+box (on the 10k data, OFF-case validation p95 ≈ 58 % for rows within 5 % of an edge vs ≈ 45 %
+inside), and the corners reach those edges too. A random 30 % of rows (`sampling.BOUNDARY_FRAC`)
+are boundary rows: on each, every one of `vdd, temp, w, vth0, toxe, ndep, u0, xj`
+(`BOUNDARY_INPUTS`) is, with probability ½ (`BOUNDARY_PER_INPUT`), redrawn uniformly from the
+outer 5 % of its range (`BOUNDARY_BAND`) at a random end. So ~24 % of rows lie within 5 % of each
+input's edge instead of 10 %. Nothing leaves the ranges above. vdd is set before vd, vs are drawn,
+so vd, vs ≤ vdd still holds. These draws use a child stream of the case RNG, so the low-|Vds| and
+source-pinning overrides are unaffected. Validation and test are drawn the same way, so their
+metrics include the boundary rows.
 
 | Case | vg | vb |
 |---|---|---|
@@ -143,7 +155,7 @@ print i(vd) i(vg) i(vs) i(vb)
 ```
 
 ### 4.3 Dataset schema (Deliverable 1)
-`data/transistor/{nmos_on,nmos_off,pmos_on,pmos_off}.csv`, 10,000 rows each, columns **in this
+`data/transistor/{nmos_on,nmos_off,pmos_on,pmos_off}.csv`, `n_samples_per_case` rows each, columns **in this
 order** (`constants.DATASET_COLUMNS`):
 
 `vdd, temp, w, vd, vs, vg, vb, vth0, toxe, ndep, u0, xj, id, ig, is, ib`

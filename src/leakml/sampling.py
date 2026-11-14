@@ -36,6 +36,19 @@ SOURCE_PIN_CASES: frozenset[Case] = frozenset({Case.NMOS_OFF, Case.PMOS_OFF})
 SOURCE_PIN_FRAC = 0.4
 SOURCE_PIN_RANGE = (1e-9, 1e-1)  # volts
 
+# Boundary oversampling, all cases (SPEC §4.1). Tree models are least accurate near the edges of
+# the sampled box (fewer neighbours; on the 10k data the OFF-case validation p95 was ~58 % for rows
+# within 5 % of an edge vs ~45 % inside), and the 200 corners reach those edges too. A fraction
+# BOUNDARY_FRAC of rows are boundary rows: on each, every input in BOUNDARY_INPUTS is, with
+# probability BOUNDARY_PER_INPUT, redrawn uniformly from the outer BOUNDARY_BAND of its range at a
+# random end. Nothing leaves the original ranges. vdd is set before vd/vs are drawn, so
+# vd, vs <= vdd still holds. The boundary draws use a child stream, so the low-|Vds| and
+# source-pinning overrides see the same base draws in every case.
+BOUNDARY_FRAC = 0.3
+BOUNDARY_PER_INPUT = 0.5
+BOUNDARY_BAND = 0.05  # fraction of each input's range width, at each end
+BOUNDARY_INPUTS: tuple[str, ...] = ("vdd", "temp", "w", *PROCESS_PARAMS)
+
 
 def make_rng(seed: int, *stream: int | str) -> np.random.Generator:
     """Deterministic child RNG for (seed, *labels).
@@ -82,6 +95,19 @@ def _low_vds_vd(
     return vd, vs
 
 
+def _boundary_masks(n: int, rng: np.random.Generator) -> dict[str, np.ndarray]:
+    """{input: rows to push to an edge}: BOUNDARY_FRAC rows, each input with BOUNDARY_PER_INPUT."""
+    row = rng.random(n) < BOUNDARY_FRAC
+    return {c: row & (rng.random(n) < BOUNDARY_PER_INPUT) for c in BOUNDARY_INPUTS}
+
+
+def _edge_values(lo: float, hi: float, n: int, rng: np.random.Generator) -> np.ndarray:
+    """n values uniform in the outer BOUNDARY_BAND of [lo, hi], at a random end."""
+    band = BOUNDARY_BAND * (hi - lo)
+    u = rng.uniform(0.0, band, n)
+    return np.where(rng.random(n) < 0.5, lo + u, hi - u)
+
+
 def _pin_source(
     vs: np.ndarray, vdd: np.ndarray, device: str, rng: np.random.Generator
 ) -> np.ndarray:
@@ -106,7 +132,8 @@ def draw_transistor_samples(
 ) -> pd.DataFrame:
     """Draw n input rows for one Part A case (no currents yet).
 
-    Fixed draw order: vdd, vd, vs, w, temp, then the process params; ON cases then draw the
+    Fixed draw order: vdd, vd, vs, w, temp, then the process params, with the boundary rows
+    (BOUNDARY_*) pushed to the range edges from a child stream; ON cases then draw the
     low-|Vds| override (LOW_VDS_*) and OFF cases the source pinning (SOURCE_PIN_*), so the rows
     they do not touch are unaffected by them.
     vg/vb follow CASE_BIAS using each row's own vdd. Returns `sample_id` + constants.INPUT_COLUMNS. Calling it again with the
@@ -114,12 +141,28 @@ def draw_transistor_samples(
     """
     case = Case(case)
     s, a = cfg.sampling, cfg.assignment
-    vdd = rng.uniform(a.vdd_nominal * (1 - s.vdd_tol), a.vdd_nominal * (1 + s.vdd_tol), n)
+    edge_rng = np.random.default_rng(rng.integers(2**63))  # child stream for the boundary draws
+    edge = _boundary_masks(n, edge_rng)
+
+    def push(x: np.ndarray, col: str, lo: float, hi: float) -> np.ndarray:
+        m = edge[col]
+        x = x.copy()
+        x[m] = _edge_values(lo, hi, int(m.sum()), edge_rng)
+        return x
+
+    vdd_lo, vdd_hi = a.vdd_nominal * (1 - s.vdd_tol), a.vdd_nominal * (1 + s.vdd_tol)
+    vdd = push(rng.uniform(vdd_lo, vdd_hi, n), "vdd", vdd_lo, vdd_hi)
     vd = rng.uniform(0.0, vdd)
     vs = rng.uniform(0.0, vdd)
-    w = rng.uniform(*s.w_mult_range, n) * a.lmin
-    temp = rng.uniform(*s.temp_range_c, n)
-    proc = sample_process_params(card.nominal[CASE_DEVICE[case]], s.process_tol, n, rng)
+    w_lo, w_hi = s.w_mult_range[0] * a.lmin, s.w_mult_range[1] * a.lmin
+    w = push(rng.uniform(*s.w_mult_range, n) * a.lmin, "w", w_lo, w_hi)
+    temp = push(rng.uniform(*s.temp_range_c, n), "temp", *s.temp_range_c)
+    nominal = card.nominal[CASE_DEVICE[case]]
+    proc = sample_process_params(nominal, s.process_tol, n, rng)
+    for p in PROCESS_PARAMS:  # in ratio space, so PMOS vth0 keeps its sign
+        m = edge[p]
+        ratio = _edge_values(1 - s.process_tol, 1 + s.process_tol, int(m.sum()), edge_rng)
+        proc.loc[m, p] = nominal[p] * ratio
     if case in LOW_VDS_CASES:
         vd, vs = _low_vds_vd(vd, vs, vdd, rng)
     if case in SOURCE_PIN_CASES:
