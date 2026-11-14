@@ -99,7 +99,7 @@ The generator already works. P1's job is to make the data **correct, sufficient 
 - [x] Review the failure handling on the real card (convergence failures? which corners?)
 
 ### Dataset size ("smallest dataset possible", brief Part A.1)
-- [ ] Learning curve with P2 (n = 1k, 2k, 5k, 10k → validation p95 error). Pick n and justify it
+- [x] Learning curve with P2 (n = 0.5k–7k train rows → validation p95 error): `scripts/05b_learning_curve.py`, `results/tables/learning_curve.*`, `results/plots/learning_curve*`. Error still falling at 7k → 10k samples is the minimum, not a surplus
 - [x] Oversample low |Vds| in the ON cases (40 %, log-uniform 1e-9..1e-2 V, SPEC §4.1): gates run ON FETs at vds ≈ 0
 
 ### Speed (helps P4)
