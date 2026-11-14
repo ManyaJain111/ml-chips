@@ -286,11 +286,23 @@ Inter-gate loading is physically present here.
 ### 6.3 Hierarchical ML
 For each vector: logic-simulate ; (gate type, input bits) per instance ; `GateLeakageModel.predict(gate,
 bits, corner_id)` (the Part B ML result for that gate/inputs/corner) ; sum. Inputs are assumed
-exactly 0/VDD and loading is ignored, so expect a lower accuracy than at gate level.
+exactly 0/VDD.
+
+**Loading term.** In Part B a gate's logic-1 inputs draw their gate-tunnelling current (`i_in_ml`)
+from ideal sources, so it is not in that gate's `i_vdd_ml`. In the circuit a high internal net is
+held up by its driver's pull-up, so this current comes from VDD (a low net sinks into the
+driver's pull-down and adds nothing). The prediction is therefore
+`i_vdd_ml = Σ i_vdd_ml(gate) + Σ f_int · i_in_ml(gate)`, with `f_int` the share of the gate's
+high pins driven by another gate (primary-input pins are fed by the testbench, as in SPICE;
+`i_in_ml` is split evenly over the high pins). Only Part B ML outputs are used, never SPICE.
+On the 32 nm LP card `i_in` is ~50 % of a gate's `i_vdd`, so without this term the circuit is
+underestimated by ~30 %.
 
 ### 6.4 Circuit result schema
 `circuit_spice.csv`: `circuit, vector, corner_id, vdd, temp, i_vdd_spice, i_in_spice, logic_ok`.
-`circuit_ml.csv`: `circuit, vector, corner_id, i_vdd_ml, i_in_ml, n_<gate>_<bits>…`.
+`circuit_ml.csv`: `circuit, vector, corner_id, i_vdd_ml, i_vdd_ml_gates, i_load_ml, i_in_ml,
+n_<gate>_<bits>…` (`i_vdd_ml` = gates + loading, `i_vdd_ml_gates` = plain sum, `i_load_ml` = loading
+term, `i_in_ml` = primary-input share, comparable with `i_in_spice`).
 `circuit_results.csv`: 1:1 join on `(circuit, vector, corner_id)`.
 
 ## 7. Metrics (`leakml/metrics.py`)
@@ -342,7 +354,7 @@ strings `"01"` / `"0010110"` into integers.
 |---|---|---|---|---|
 | env check | 00 | P4 | 1 | s |
 | nominals | 01 | P1 | – | s |
-| transistor data | 02 | P1 | 40,000 | ~5 min |
+| transistor data | 02 | P1 | 120,000 | ~15 min |
 | data check | 03 | P1 | – | s |
 | train + compare | 04 | P2 | – | min–tens of min |
 | finalize | 05 | P2 | – | s |
