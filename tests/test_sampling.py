@@ -14,6 +14,10 @@ from leakml.constants import (
 )
 from leakml.pdk import format_number
 from leakml.sampling import (
+    BOUNDARY_BAND,
+    BOUNDARY_FRAC,
+    BOUNDARY_INPUTS,
+    BOUNDARY_PER_INPUT,
     LOW_VDS_CASES,
     LOW_VDS_FRAC,
     LOW_VDS_RANGE,
@@ -126,3 +130,34 @@ def test_source_pinning_keeps_other_rows(dev_cfg, card):
     for col in ("vdd", "vd", "w", "temp", *PROCESS_PARAMS):
         same = (ref.vd - ref.vs).abs() > LOW_VDS_RANGE[1]  # ON rows the low-Vds draw left alone
         assert np.array_equal(ref.loc[same, col], off.loc[same, col]), col
+
+
+def _edge_dist(df: pd.DataFrame, cfg, card, device: str) -> pd.DataFrame:
+    """Normalised distance of each boundary input to the nearer end of its range (0 = at an edge)."""
+    a, s = cfg.assignment, cfg.sampling
+    nom = card.nominal[device]
+    u = {
+        "vdd": (df.vdd / a.vdd_nominal - (1 - s.vdd_tol)) / (2 * s.vdd_tol),
+        "temp": (df.temp - s.temp_range_c[0]) / (s.temp_range_c[1] - s.temp_range_c[0]),
+        "w": (df.w / a.lmin - s.w_mult_range[0]) / (s.w_mult_range[1] - s.w_mult_range[0]),
+        **{p: (df[p] / nom[p] - (1 - s.process_tol)) / (2 * s.process_tol) for p in PROCESS_PARAMS},
+    }
+    u = pd.DataFrame(u)
+    return np.minimum(u, 1 - u)
+
+
+@pytest.mark.parametrize("case", CASES)
+def test_boundary_oversampling(case, dev_cfg, card):
+    df = draw_transistor_samples(case, 20_000, dev_cfg, card, make_rng(6, case.value))
+    d = _edge_dist(df, dev_cfg, card, CASE_DEVICE[case])
+    assert list(d.columns) == list(BOUNDARY_INPUTS)
+    assert (d >= -1e-12).all().all()  # nothing leaves the original ranges
+    # each input: uniform share 2*band plus BOUNDARY_FRAC * BOUNDARY_PER_INPUT pushed to the band
+    p_push = BOUNDARY_FRAC * BOUNDARY_PER_INPUT
+    expected = p_push + (1 - p_push) * 2 * BOUNDARY_BAND
+    near = (d < BOUNDARY_BAND).mean()
+    assert near.to_numpy() == pytest.approx(expected, abs=0.015)
+    # both ends are used
+    assert (df.temp < dev_cfg.sampling.temp_range_c[0] + 5).mean() > 0.05
+    assert (df.temp > dev_cfg.sampling.temp_range_c[1] - 5).mean() > 0.05
+    assert ((df.vd <= df.vdd) & (df.vs <= df.vdd)).all()
