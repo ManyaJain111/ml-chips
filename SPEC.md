@@ -334,6 +334,7 @@ strings `"01"` / `"0010110"` into integers.
 | data check | 03 | P1 | – | s |
 | train + compare | 04 | P2 | – | min–tens of min |
 | finalize | 05 | P2 | – | s |
+| learning curve | 05b | P1 | – | min (refits the chosen models on nested subsets) |
 | corners | 06 | P3 | – | s |
 | gate SPICE | 07 | P3 | 3,600 | ~1 min |
 | gate ML | 08 | P3 | – | s |
