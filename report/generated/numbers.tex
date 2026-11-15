@@ -47,6 +47,23 @@
 \newcommand{\KirchhoffMaxRelPmosOn}{\num{1.3e-02}}
 \newcommand{\KirchhoffMaxAbsPmosOff}{\qty{1.7e-16}{\ampere}}
 \newcommand{\KirchhoffMaxRelPmosOff}{\num{8.5e-02}}
+\newcommand{\KirchhoffMedianAbsNmosOn}{\qty{4.0e-20}{\ampere}}
+\newcommand{\KirchhoffPninetyfiveAbsNmosOn}{\qty{4.6e-16}{\ampere}}
+\newcommand{\KirchhoffMedianRelNmosOn}{\num{1.1e-11}}
+\newcommand{\KirchhoffPninetyfiveRelNmosOn}{\num{1.4e-10}}
+\newcommand{\KirchhoffMedianAbsNmosOff}{\qty{1.1e-24}{\ampere}}
+\newcommand{\KirchhoffPninetyfiveAbsNmosOff}{\qty{4.8e-22}{\ampere}}
+\newcommand{\KirchhoffMedianRelNmosOff}{\num{1.2e-11}}
+\newcommand{\KirchhoffPninetyfiveRelNmosOff}{\num{5.9e-11}}
+\newcommand{\KirchhoffMedianAbsPmosOn}{\qty{3.3e-17}{\ampere}}
+\newcommand{\KirchhoffPninetyfiveAbsPmosOn}{\qty{3.0e-16}{\ampere}}
+\newcommand{\KirchhoffMedianRelPmosOn}{\num{8.0e-09}}
+\newcommand{\KirchhoffPninetyfiveRelPmosOn}{\num{3.1e-03}}
+\newcommand{\KirchhoffMedianAbsPmosOff}{\qty{2.6e-17}{\ampere}}
+\newcommand{\KirchhoffPninetyfiveAbsPmosOff}{\qty{7.2e-17}{\ampere}}
+\newcommand{\KirchhoffMedianRelPmosOff}{\num{1.5e-04}}
+\newcommand{\KirchhoffPninetyfiveRelPmosOff}{\num{4.7e-03}}
+\newcommand{\KirchhoffWorstRel}{\num{8.5e-02}}
 \newcommand{\KirchhoffWorstAbs}{\qty{9.7e-15}{\ampere}}
 \newcommand{\ChosenModelNmosOn}{GBDT}
 \newcommand{\ValMedianErrNmosOn}{\qty{4.8}{\percent}}
@@ -160,6 +177,49 @@
 \newcommand{\CircuitNumSims}{\num{51200}}
 \newcommand{\CircuitSpiceMedian}{\qty{8.04e-10}{\ampere}}
 \newcommand{\CircuitIinMedianErr}{\qty{1.59}{\percent}}
+\newcommand{\LowVdsFrac}{\qty{40}{\percent}}
+\newcommand{\LowVdsMin}{\qty{1e-09}{\volt}}
+\newcommand{\LowVdsMax}{\qty{1e-02}{\volt}}
+\newcommand{\SourcePinFrac}{\qty{40}{\percent}}
+\newcommand{\PinMin}{\qty{1e-09}{\volt}}
+\newcommand{\PinMax}{\qty{1e-01}{\volt}}
+\newcommand{\DrainPinFrac}{\qty{50}{\percent}}
+\newcommand{\BothPinFrac}{\qty{20}{\percent}}
+\newcommand{\BoundaryFrac}{\qty{30}{\percent}}
+\newcommand{\BoundaryPerInput}{\qty{50}{\percent}}
+\newcommand{\BoundaryBand}{\qty{5}{\percent}}
+\newcommand{\BoundaryEdgeShare}{\qty{24}{\percent}}
+\newcommand{\BoundaryEdgeShareUniform}{\qty{10}{\percent}}
+\newcommand{\BoundaryInputs}{\texttt{vdd}, \texttt{temp}, \texttt{w}, \texttt{vth0}, \texttt{toxe}, \texttt{ndep}, \texttt{u0}, \texttt{xj}}
+\newcommand{\NumFeatures}{22}
+\newcommand{\AsinhQuantile}{\qty{1}{\percent}}
+\newcommand{\TargetKind}{\texttt{asinh}}
+\newcommand{\ShapedCases}{\texttt{nmos\_on} and \texttt{pmos\_on}}
+\newcommand{\GridPoints}{6}
+\newcommand{\ChosenHyperNmosOn}{leaves 63, learning rate 0.03}
+\newcommand{\ChosenHyperNmosOff}{leaves 63, learning rate 0.03}
+\newcommand{\ChosenHyperPmosOn}{leaves 63, learning rate 0.03}
+\newcommand{\ChosenHyperPmosOff}{leaves 63, learning rate 0.03}
+\newcommand{\ChosenSummary}{GBDT in all four cases}
+\newcommand{\KclCases}{all four cases}
+\newcommand{\KclDirectPninetyfiveNmosOn}{\qty{52.2}{\percent}}
+\newcommand{\KclDerivedPninetyfiveNmosOn}{\qty{46.3}{\percent}}
+\newcommand{\KclDirectPninetyfiveNmosOff}{\qty{24.3}{\percent}}
+\newcommand{\KclDerivedPninetyfiveNmosOff}{\qty{15.4}{\percent}}
+\newcommand{\KclDirectPninetyfivePmosOn}{\qty{54.3}{\percent}}
+\newcommand{\KclDerivedPninetyfivePmosOn}{\qty{48.9}{\percent}}
+\newcommand{\KclDirectPninetyfivePmosOff}{\qty{25.7}{\percent}}
+\newcommand{\KclDerivedPninetyfivePmosOff}{\qty{14.3}{\percent}}
+\newcommand{\ConstLeafCommit}{\texttt{e7eb562}}
+\newcommand{\ConstLeafValMedianErrNmosOn}{\qty{8.9}{\percent}}
+\newcommand{\ConstLeafValPninetyfiveErrNmosOn}{\qty{57.0}{\percent}}
+\newcommand{\ConstLeafValMedianErrNmosOff}{\qty{2.9}{\percent}}
+\newcommand{\ConstLeafValPninetyfiveErrNmosOff}{\qty{24.3}{\percent}}
+\newcommand{\ConstLeafValMedianErrPmosOn}{\qty{8.8}{\percent}}
+\newcommand{\ConstLeafValPninetyfiveErrPmosOn}{\qty{59.8}{\percent}}
+\newcommand{\ConstLeafValMedianErrPmosOff}{\qty{3.0}{\percent}}
+\newcommand{\ConstLeafValPninetyfiveErrPmosOff}{\qty{24.2}{\percent}}
+\newcommand{\ConstLeafGateMeanAcc}{\qty{93.95}{\percent}}
 
 % Learning curve: \LCMedian{case}{target}{n_train} and \LCPninetyfive{case}{target}{n_train},
 % e.g. \LCMedian{nmos_off}{id}{7000} (validation error of the chosen model type).

@@ -2,3 +2,15 @@
 \section{Appendix}\label{sec:appendix}
 
 \todo{example netlists (D2), reproduction commands (D9), extra tables}
+
+\subsection{Per-current model comparison}
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \setlength{\tabcolsep}{3pt}
+  \caption{Model comparison on the validation set per current (Deliverable~4, full form):
+  $R^2$ on $\log_{10}|I|$, median and 95th-percentile relative error. ``--'': no rows above
+  \IFloor{} (OFF-state $I_G$).}
+  \label{tab:modelsfull}
+  \input{generated/tab_models_full}
+\end{table}

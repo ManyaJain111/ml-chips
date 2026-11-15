@@ -1,4 +1,233 @@
+% Based on text by Joanna (P2).
 % Transistor models
 \section{Transistor models}\label{sec:models}
 
-\todo{four model types, hyperparameters, preprocessing, comparison table, chosen models on test}
+For each of the four cases one model predicts all four terminal currents ($I_D$, $I_G$, $I_S$,
+$I_B$) from the raw inputs of Table~\ref{tab:ranges}. Each model is saved together with its
+feature code and target transform, so later stages call it on raw voltages and get currents in
+amperes back.
+
+\subsection{Input features}
+Within one case $V_G$ and $V_B$ are always $0$ or $V_{DD}$, so they carry no information on
+their own; the terminal voltage \emph{differences} do. From the raw inputs we build
+\NumFeatures{} features:
+\begin{itemize}
+  \item supply and temperature: $V_{DD}$, $T$ (K), $1/T$, thermal voltage $v_T = kT/q$;
+  \item geometry: $W$, $\ln W$;
+  \item bias: $V_{GS}$, $V_{DS}$, $V_{BS}$, $V_{GD}$, $V_{BD}$, $|V_{DS}|$;
+  \item subthreshold physics: $V_{GS}/v_T$, $V_{DS}/v_T$, $(V_{GS}-|V_{th0}|)/v_T$ and the drain
+        factor $1-e^{-|V_{DS}|/v_T}$;
+  \item process: the five parameters divided by their nominal values from the model card (so
+        they lie in a narrow band around 1), plus $1/t_{ox}$, since gate tunnelling grows
+        steeply as the oxide gets thinner.
+\end{itemize}
+The physics features put the dominant exponential dependences (subthreshold conduction, its
+temperature dependence, tunnelling) into a form in which the log-current is close to linear, which
+every model type benefits from. For PMOS every voltage difference is negated ($V_{SG}$ instead of
+$V_{GS}$) and $|V_{th0}|$ is used, so PMOS features read like NMOS ones: a larger $V_{GS}$ always
+means ``more on''. The same function computes the features in training and inside the saved
+model, and the feature list is stored in the model file; a model refuses to predict if the
+feature code has changed since it was trained.
+
+\subsection{Target transform}
+The terminal currents span more than ten decades, from OFF-state gate currents far below
+\IFloor{} to ON-state drain currents in the microampere range, and $I_D$, $I_S$ change sign with
+$V_D-V_S$. Regressing amperes with a squared loss would fit only the largest currents, so each
+model predicts (\TargetKind{} transform)
+\begin{equation}
+  z_t = \operatorname{asinh}\!\left(\frac{I_t}{i_{0,t}}\right),\qquad
+  t \in \{D, G, S, B\},
+\end{equation}
+where $i_{0,t}$ is the \AsinhQuantile{} quantile of $|I_t|$ on the training rows. For
+$|I|\gg i_0$, $\operatorname{asinh}(I/i_0)\approx \operatorname{sign}(I)\ln(2|I|/i_0)$, so an
+error $\delta z$ is a relative current error of about $\delta z$, which is exactly what we are
+judged on. Unlike $\log_{10}|I|$, asinh is smooth through zero and carries the sign, so no
+separate sign model is needed. A per-target $i_0$ is necessary because the currents live on very
+different scales: one fixed $i_0$ cannot be ``small'' for all of them.
+
+\paragraph{Channel shaping (ON cases).}
+In the ON cases the channel current passes through zero at $V_D=V_S$, with the shape
+$1-e^{-V_{DS}/v_T}$ in subthreshold and $\propto V_{DS}$ in the linear region. For
+\ShapedCases, $I_D$ and $I_S$ are therefore divided by
+\begin{equation}
+  s(V_{DS}) = \tanh\!\left(\frac{V_D - V_S}{2 v_T}\right)
+\end{equation}
+(magnitude floored to avoid division by zero) before the transform and multiplied back
+afterwards. The model then learns a smooth, one-signed quantity instead of a sign flip at
+$V_{DS}=0$, where \LowVdsFrac{} of the ON rows are concentrated by design
+(Section~\ref{sec:oversampling}). Shaping is \emph{not} used in the OFF cases: there $I_D$ and
+$I_S$ near $V_D=V_S$ are dominated by junction leakage, which does not change sign with $V_{DS}$,
+and shaping made them worse on validation.
+% Joanna's development numbers for shaping (first 10k data set: nmos_on MLP p95 164/206 % ->
+% 34/48 %; nmos_off GBDT 65/100 % -> 70/111 %) are not reproducible from current outputs, so
+% they are not quoted. Rerun with shape_channel on/off if we want numbers here.
+
+\paragraph{Source current from Kirchhoff's law.}
+The four terminal currents sum to zero, and $I_D$ and $I_B$ are predicted much more accurately
+than $I_S$ (in the OFF cases $I_S$ is tiny and changes sign). The source current can therefore
+also be derived as
+\begin{equation}
+  I_S = -(I_D + I_G + I_B),
+\end{equation}
+which in addition makes every prediction satisfy Kirchhoff's law exactly, a property the gate
+level relies on. Both variants are scored on the validation set for every hyperparameter setting
+and the better one is kept per case. The derived $I_S$ won in \KclCases. For the chosen model
+type it lowers the validation p95 error (mean over currents) from \KclDirectPninetyfiveNmosOff{}
+to \KclDerivedPninetyfiveNmosOff{} for \texttt{nmos\_off}, from \KclDirectPninetyfivePmosOff{} to
+\KclDerivedPninetyfivePmosOff{} for \texttt{pmos\_off}, from \KclDirectPninetyfiveNmosOn{} to
+\KclDerivedPninetyfiveNmosOn{} for \texttt{nmos\_on} and from \KclDirectPninetyfivePmosOn{} to
+\KclDerivedPninetyfivePmosOn{} for \texttt{pmos\_on}.
+
+\subsection{Model types and hyperparameters}
+Four model types are compared for every case (Table~\ref{tab:hyper}): polynomial ridge
+regression as an interpretable baseline, a random forest, gradient-boosted trees (LightGBM, one
+regressor per current) and a multilayer perceptron (which also standardises its targets). Each
+predicts all four transformed currents, inputs are standardised, and every estimator is seeded
+(\SeedTraining). Each model type has a small grid of \GridPoints{} points, searched on the
+validation set together with the two $I_S$ variants; everything else is fixed at the values in
+the table.
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{Model types, fixed hyperparameters and validation search grids (generated from
+  \texttt{src/leakml/ml/zoo.py}).}
+  \label{tab:hyper}
+  \input{generated/tab_hyper}
+\end{table}
+
+\paragraph{Linear leaves in the GBDT.}
+With constant leaves a boosted ensemble approximates the smooth log-current surface by a fine
+staircase, which leaves a floor of a few per cent in the median error even with a thousand
+trees. LightGBM's linear trees fit a small ridge-regularised linear model in every leaf instead.
+Since the log-current is close to linear in the physics features, each leaf then follows the
+local slope and the staircase disappears.
+% "roughly halves in every case" is read from tab_linear_leaves; re-check after the final run. Table~\ref{tab:linear} compares the last run with
+constant leaves (commit \ConstLeafCommit, identical data, grid and selection) with the final
+linear-leaf models: the validation median error roughly halves in every case, for example
+\ConstLeafValMedianErrNmosOff{} $\to$ \ValMedianErrNmosOff{} for \texttt{nmos\_off} and
+\ConstLeafValMedianErrNmosOn{} $\to$ \ValMedianErrNmosOn{} for \texttt{nmos\_on}. The p95 error
+improves as well, and the gate-level mean accuracy (Section~\ref{sec:gates}) rises from
+\ConstLeafGateMeanAcc{} to \GateMeanAcc{} with no other change.
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{Effect of linear leaves: chosen GBDT per case, validation errors averaged over the
+  currents, with constant leaves (commit \ConstLeafCommit) and with linear leaves (final). Last
+  row: gate-level mean accuracy over all 18 gate cases.}
+  \label{tab:linear}
+  \input{generated/tab_linear_leaves}
+\end{table}
+
+\subsection{Metrics and selection}
+Errors are relative, $e = (I_{ML}-I_{SPICE})/|I_{SPICE}|$. We report the median and 95th
+percentile of $|e|$, the mean accuracy $100\,(1-\overline{|e|})$, and $R^2$ on $\log_{10}|I|$.
+Rows with $|I_{SPICE}| <$ \IFloor{} are excluded from the relative errors: there the relative
+error is dominated by numerical noise, while such currents contribute nothing to gate leakage.
+This removes every OFF-state gate current. For every case the model with the lowest validation
+95th-percentile error, averaged over the currents that have one, is selected (ties: median
+error, then training time). We select on the p95 rather than the median because gate leakage is
+a sum over several transistors, so the tail of the transistor error, not its typical value,
+limits gate accuracy.
+
+\subsection{Results}
+Table~\ref{tab:models} compares the four model types on the validation set (Deliverable~4) and
+Table~\ref{tab:chosen} reports the chosen models on the test set (Deliverable~5). Per-current
+validation values are in Table~\ref{tab:modelsfull} in the appendix.
+The chosen model is \ChosenSummary{}, with the grid point
+\ChosenHyperNmosOn{} (\texttt{nmos\_on}), \ChosenHyperNmosOff{} (\texttt{nmos\_off}),
+\ChosenHyperPmosOn{} (\texttt{pmos\_on}) and \ChosenHyperPmosOff{} (\texttt{pmos\_off}).
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{Model comparison on the \emph{validation} set (Deliverable~4), best grid point of each
+  model type. Metrics are averaged over the currents that have a relative error (OFF-state
+  $I_G$ is entirely below \IFloor). Bold: selected model (lowest p95).}
+  \label{tab:models}
+  \input{generated/tab_models}
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{Chosen models on the \emph{test} set (Deliverable~5), \NTest{} rows per case. Bias is
+  the median signed relative error; ``Excl.''\ counts rows below \IFloor, which are left out of
+  the relative errors.}
+  \label{tab:chosen}
+  \input{generated/tab_chosen}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.48\linewidth]{pred_vs_spice_nmos_on.pdf}\hfill
+  \includegraphics[width=0.48\linewidth]{pred_vs_spice_nmos_off.pdf}\\[2mm]
+  \includegraphics[width=0.48\linewidth]{pred_vs_spice_pmos_on.pdf}\hfill
+  \includegraphics[width=0.48\linewidth]{pred_vs_spice_pmos_off.pdf}
+  \caption{Predicted vs.\ SPICE currents on the test set (log--log), one $2\times2$ block per case
+  (top: \texttt{nmos\_on}, \texttt{nmos\_off}; bottom: \texttt{pmos\_on}, \texttt{pmos\_off}).
+  Notice the tight diagonal over many decades for every current, and the scatter that
+  appears only at the smallest currents (OFF $I_S$ below the floor, ON $I_D$/$I_S$ near the zero
+  crossing), which carry no leakage.}
+  \label{fig:predvsspice}
+\end{figure}
+
+\paragraph{Why GBDT won.}
+GBDT was the best model type in every case, by a wide margin on both the median and the p95
+(Table~\ref{tab:models}). Polynomial ridge is far behind everywhere: a degree-2 or 3 polynomial
+cannot follow a log-current that switches between exponential (subthreshold) and polynomial
+(above-threshold) behaviour and has sharp structure at $V_{DS}\approx 0$ and at the pinned rails.
+The random forest averages constant leaves without boosting, so it inherits the staircase error
+at full size and cannot refine it; its median error is several times that of the GBDT. The MLP
+is the strongest of the others in the OFF cases, where the targets are smooth, but it fits the
+narrow, densely oversampled regions (low $|V_{DS}|$, pinned source and drain) less well than
+trees, which split on exactly those coordinates. The GBDT combines both strengths: axis-aligned
+splits isolate the special operating points, and linear leaves follow the smooth physics inside
+each region.
+% Re-check the qualitative ranking above (MLP second in OFF cases; "several times") after the
+% final run: it is read from tab_models, not generated.
+
+The OFF models are the most accurate; $I_B$ is the easiest current in every case. The
+largest errors are the ON-state $I_D$ and $I_S$ p95 (Table~\ref{tab:chosen}), which come almost
+entirely from rows near $V_D = V_S$, where the channel current crosses zero and a small absolute
+error is a large relative one. Inside a gate these currents are not used directly: the channel
+current of an ON transistor at $V_{DS}\approx0$ is fixed by the rest of the gate, and the ON
+currents that do enter the gate leakage, $I_G$ and $I_B$, are predicted well. Section~\ref{sec:error}
+quantifies this.
+
+% ---------------------------------------------------------------------------------------------
+% NOTES FOR PHASE 4 (moved from Joanna's p2_transistor.tex; numbers are from her 10k-row
+% models and MUST be regenerated with the final models before use).
+%
+% Section 6, error analysis (transistor part):
+%  - ON-state I_D, I_S near V_D = V_S: largest relative errors; p95 for |V_DS| < 1 mV vs
+%    > 0.3 V (her numbers: nmos_on 101/214 % vs 41/47 %; pmos_on 163/277 % vs 38/38 %).
+%    40 % of ON data at |V_DS| <= 10 mV, so these rows dominate the ON statistics. ON I_G, I_B
+%    at small |V_DS| are good (her: p95 30/11 % nmos_on, 25/12 % pmos_on).
+%  - OFF-state I_S: tiny (a quarter of rows below 1e-15 A), changes sign; p95 by |V_DS| band.
+%    KCL-derived I_S helps but stays the worst OFF current.
+%  - Temperature: OFF I_B p95 grows from <1 % below 0 C to ~16-18 % above 85 C, following the
+%    steep T dependence of junction leakage; at low T I_B sits on the 1e-14 A floor.
+%  - Coverage of the operating point: the first (uniform) data set barely covered the bias points
+%    of transistors in a gate (ON: V_DS ~ 1e-7 V; OFF: source at own rail, drain at the other);
+%    gate simulations confirmed the problem but were never used to train/tune/select. Effect of
+%    the regenerated data on the OFF supply-side current I_S + I_B at the operating point (her:
+%    75.4 -> 88.9 % nmos_off, 80.7 -> 89.5 % pmos_off). Needs a pointer to Section 4 numbers.
+%
+% Section 7, limitations:
+%  - Accuracy at the gates' OFF operating point bounds gate/circuit accuracy; more rows there or
+%    a region-specific model would be next.
+%  - Relative error near zero current (ON I_D, I_S; OFF I_S) is unbounded; the floor only
+%    partly fixes it. Little effect on gate leakage, but dominates per-current statistics.
+%  - Grid edge: all chosen GBDTs use 63 leaves (largest in grid) -> larger trees may help.
+%  - V_G fixed at 0/VDD: AND2/OR2 inner inverter input is snapped to the nearest rail.
+%  - Junction current floor: many OFF rows have I_D, I_B within +-10 % of 1e-14 A at any T,
+%    consistent with BSIM4's default junction saturation current without AS/AD in the netlist;
+%    junction leakage is therefore not physically scaled with W.
+%  - MLP sensitive to early stopping (patience changed the error by about a third); a learning-
+%    rate schedule or longer training could make it competitive.
+%  - Model size: linear-leaf GBDTs (1000 trees per current) are large joblib files; compression
+%    or fewer, deeper trees would help.
+%  - Learning curve not saturated at 21k training rows (Section 2): more data still helps a bit.
+% ---------------------------------------------------------------------------------------------

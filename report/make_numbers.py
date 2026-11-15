@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import math
 import shutil
+import subprocess
 import sys
 import zipfile
 from collections.abc import Callable
@@ -28,8 +29,12 @@ import numpy as np
 import pandas as pd
 import yaml
 
-from leakml import io
+from leakml import io, sampling
 from leakml.metrics import summarize
+from leakml.ml import zoo
+from leakml.constants import Case
+from leakml.ml.features import TargetTransform, build_features
+from leakml.ml.train import SHAPED_CASES, TARGET_KIND
 
 ROOT = Path(__file__).resolve().parents[1]
 REPORT = ROOT / "report"
@@ -307,6 +312,18 @@ for c in CASES:
         lambda c=c: sci(one(need(kir, "case", "max_rel_r"), kir["case"] == c)["max_rel_r"], 2),
         f"kirchhoff {c} max_rel_r",
     )
+KIR_STATS = (("median_abs_r_a", "MedianAbs", True), ("p95_abs_r_a", "PninetyfiveAbs", True),
+             ("median_rel_r", "MedianRel", False), ("p95_rel_r", "PninetyfiveRel", False))  # fmt: skip
+for c in CASES:
+    for col, nm, is_amp in KIR_STATS:
+        define(
+            f"Kirchhoff{nm}{camel(c)}",
+            lambda c=c, col=col, a=is_amp: (amp if a else sci)(
+                one(need(kir, "case", col), kir["case"] == c)[col], 2),
+            f"kirchhoff {c} {col}",
+        )  # fmt: skip
+define("KirchhoffWorstRel", lambda: sci(need(kir, "max_rel_r")["max_rel_r"].max(), 2),
+       "kirchhoff max_rel_r")  # fmt: skip
 define(
     "KirchhoffWorstAbs",
     lambda: amp(need(kir, "max_abs_r_a")["max_abs_r_a"].max(), 2),
@@ -676,6 +693,258 @@ def _circuit_table() -> str:
 
 
 write_table("circuit", _circuit_table, "results/tables/circuit_results.csv")
+
+
+# ------------------------------------------------------------------ sampling rules (code constants)
+# Design constants of leakml.sampling (not results), generated so the text cannot drift from code.
+define("LowVdsFrac", lambda: pct(100 * sampling.LOW_VDS_FRAC, 0), "sampling.LOW_VDS_FRAC")
+define("LowVdsMin", lambda: rf"\qty{{{sampling.LOW_VDS_RANGE[0]:.0e}}}{{\volt}}", "LOW_VDS_RANGE")
+define("LowVdsMax", lambda: rf"\qty{{{sampling.LOW_VDS_RANGE[1]:.0e}}}{{\volt}}", "LOW_VDS_RANGE")
+define("SourcePinFrac", lambda: pct(100 * sampling.SOURCE_PIN_FRAC, 0), "SOURCE_PIN_FRAC")
+define("PinMin", lambda: rf"\qty{{{sampling.SOURCE_PIN_RANGE[0]:.0e}}}{{\volt}}", "SOURCE_PIN_RANGE")
+define("PinMax", lambda: rf"\qty{{{sampling.SOURCE_PIN_RANGE[1]:.0e}}}{{\volt}}", "SOURCE_PIN_RANGE")
+define("DrainPinFrac", lambda: pct(100 * sampling.DRAIN_PIN_FRAC, 0), "DRAIN_PIN_FRAC")
+define("BothPinFrac", lambda: pct(100 * sampling.DRAIN_PIN_FRAC * sampling.SOURCE_PIN_FRAC, 0),
+       "DRAIN_PIN_FRAC * SOURCE_PIN_FRAC")  # fmt: skip
+define("BoundaryFrac", lambda: pct(100 * sampling.BOUNDARY_FRAC, 0), "BOUNDARY_FRAC")
+define("BoundaryPerInput", lambda: pct(100 * sampling.BOUNDARY_PER_INPUT, 0), "BOUNDARY_PER_INPUT")
+define("BoundaryBand", lambda: pct(100 * sampling.BOUNDARY_BAND, 0), "BOUNDARY_BAND")
+define("BoundaryEdgeShare",
+       lambda: pct(100 * (sampling.BOUNDARY_FRAC * sampling.BOUNDARY_PER_INPUT
+                          + (1 - sampling.BOUNDARY_FRAC * sampling.BOUNDARY_PER_INPUT)
+                          * 2 * sampling.BOUNDARY_BAND), 0),
+       "share of rows within BOUNDARY_BAND of an edge, per input")  # fmt: skip
+define("BoundaryEdgeShareUniform", lambda: pct(100 * 2 * sampling.BOUNDARY_BAND, 0),
+       "uniform share within BOUNDARY_BAND of an edge")  # fmt: skip
+define("BoundaryInputs", lambda: ", ".join(tt(c) for c in sampling.BOUNDARY_INPUTS),
+       "BOUNDARY_INPUTS")  # fmt: skip
+
+
+# ------------------------------------------------------------------ features / hyperparameters
+def _num_features() -> str:
+    head = io.read_csv(ROOT / "data" / "transistor" / "nmos_off.csv").head(3)
+    return str(build_features(head, "nmos_off").shape[1])
+
+
+define("NumFeatures", _num_features, "build_features column count")
+define("AsinhQuantile", lambda: pct(100 * TargetTransform().quantile, 0),
+       "TargetTransform.quantile")  # fmt: skip
+define("TargetKind", lambda: tt(TARGET_KIND), "train.TARGET_KIND")
+define("ShapedCases", lambda: " and ".join(tt(c) for c in CASES if Case(c) in SHAPED_CASES),
+       "train.SHAPED_CASES")  # fmt: skip
+
+
+def _grid_size(name: str) -> int:
+    return int(np.prod([len(v) for v in zoo.search_space(name).values()]))
+
+
+define("GridPoints", lambda: str(_grid_size(MODELS[0])) if len({_grid_size(m) for m in MODELS}) == 1
+       else "/".join(str(_grid_size(m)) for m in MODELS), "zoo.search_space sizes")  # fmt: skip
+
+
+def _hp_value(k: str, v) -> str:
+    if isinstance(v, bool):
+        return "yes" if v else "no"
+    if isinstance(v, tuple):
+        return r"$" + r"\times".join(str(x) for x in v) + r"$"
+    if isinstance(v, float) and v != 0 and (abs(v) < 1e-2 or abs(v) >= 1e4):
+        return rf"\num{{{v:.0e}}}"
+    return tex_escape(f"{v:g}" if isinstance(v, float) else v)
+
+
+HP_NAMES = {
+    "degree": "degree", "alpha": r"$\alpha$", "n_estimators": "trees",
+    "max_features": "max.\\ features", "min_samples_leaf": "min.\\ leaf",
+    "learning_rate": "learning rate", "num_leaves": "leaves",
+    "min_child_samples": "min.\\ child samples", "subsample": "row subsample",
+    "colsample_bytree": "feature subsample", "linear_tree": "linear leaves",
+    "linear_lambda": r"linear-leaf $\lambda$", "hidden_layer_sizes": "layers",
+    "learning_rate_init": "Adam lr", "batch_size": "batch",
+    "n_iter_no_change": "early-stop patience (epochs)",
+    "validation_fraction": "early-stop hold-out",
+}  # fmt: skip
+HP_SKIP = {"n_jobs", "subsample_freq", "early_stopping", "max_iter"}
+
+
+def _hyper_table() -> str:
+    rows = []
+    for m in MODELS:
+        d = zoo.default_hyperparams(m)
+        grid = zoo.search_space(m)
+        defaults = ", ".join(f"{HP_NAMES.get(k, tex_escape(k))} {_hp_value(k, v)}"
+                             for k, v in d.items() if k not in HP_SKIP and k not in grid)  # fmt: skip
+        g = "; ".join(f"{HP_NAMES.get(k, tex_escape(k))} $\\in$ \\{{"
+                      + ", ".join(_hp_value(k, x) for x in v) + "\\}" for k, v in grid.items())  # fmt: skip
+        rows.append([MODEL_NAMES[m], defaults or "--", g])
+    colspec = (r">{\raggedright\arraybackslash}p{0.17\linewidth}"
+               r">{\raggedright\arraybackslash}p{0.43\linewidth}"
+               r">{\raggedright\arraybackslash}p{0.34\linewidth}")  # fmt: skip
+    return tabular(colspec, ["Model", "Fixed hyperparameters", "Validation grid"], rows)
+
+
+write_table("hyper", _hyper_table, "leakml.ml.zoo defaults and search_space")
+
+
+def _chosen_hp(c: str) -> str:
+    import ast
+
+    r = one(need(chosen, "case", "model", "hyperparams"), chosen["case"] == c)
+    hp = ast.literal_eval(r["hyperparams"])
+    grid = zoo.search_space(r["model"])
+    return ", ".join(f"{HP_NAMES.get(k, tex_escape(k))} {_hp_value(k, hp[k])}" for k in grid)
+
+
+for c in CASES:
+    define(f"ChosenHyper{camel(c)}", lambda c=c: _chosen_hp(c), f"chosen_models {c} hyperparams")
+
+
+def _chosen_summary() -> str:
+    d = need(chosen, "case", "model")
+    models = d.set_index("case")["model"].reindex(CASES)
+    if models.nunique() == 1:
+        return f"{MODEL_NAMES.get(models.iloc[0], tex_escape(models.iloc[0]))} in all four cases"
+    return "; ".join(f"{tt(c)}: {MODEL_NAMES.get(m, tex_escape(m))}" for c, m in models.items())
+
+
+define("ChosenSummary", _chosen_summary, "chosen_models model column")
+
+
+def _kcl_summary() -> str:
+    d = need(chosen, "case", "is_kcl")
+    k = d.set_index("case")["is_kcl"].astype(str).str.lower().eq("true").reindex(CASES)
+    if k.all():
+        return "all four cases"
+    if not k.any():
+        return "none of the cases"
+    return ", ".join(tt(c) for c in CASES if k[c])
+
+
+define("KclCases", _kcl_summary, "chosen_models is_kcl")
+
+# Direct vs derived I_S: best grid point of the chosen model type, mean val p95 over currents.
+search = load_csv("model_search")
+
+
+def _kcl_variant(c: str, kcl: bool) -> str:
+    d = need(search, "case", "model", "is_kcl", "p95_err_pct")
+    m = one(need(chosen, "case", "model"), chosen["case"] == c)["model"]
+    sel = d[(d["case"] == c) & (d["model"] == m)
+            & (d["is_kcl"].astype(str).str.lower() == str(kcl).lower())]  # fmt: skip
+    if sel.empty:
+        raise LookupError("no rows")
+    return pct(sel["p95_err_pct"].min(), 1)
+
+
+for c in CASES:
+    define(f"KclDirectPninetyfive{camel(c)}", lambda c=c: _kcl_variant(c, False),
+           f"model_search {c} is_kcl=False")  # fmt: skip
+    define(f"KclDerivedPninetyfive{camel(c)}", lambda c=c: _kcl_variant(c, True),
+           f"model_search {c} is_kcl=True")  # fmt: skip
+
+# Linear-leaf improvement: the last run with constant-leaf GBDT is commit CONST_LEAF_COMMIT
+# (same data and grid; the only code change up to the linear-leaf run is linear_tree in zoo.py).
+CONST_LEAF_COMMIT = "e7eb562"
+
+
+def git_csv(path: str) -> pd.DataFrame:
+    import io as _io
+
+    out = subprocess.run(["git", "-C", str(ROOT), "show", f"{CONST_LEAF_COMMIT}:{path}"],
+                         capture_output=True, text=True, check=True).stdout  # fmt: skip
+    return pd.read_csv(_io.StringIO(out), dtype={"inputs": str})
+
+
+try:
+    const_chosen = git_csv("results/tables/chosen_models.csv")
+    const_gate = git_csv("results/tables/gate_results.csv")
+except Exception as e:  # noqa: BLE001
+    missing.append(f"constant-leaf baseline (git show {CONST_LEAF_COMMIT}): {e}")
+    const_chosen = const_gate = None
+
+define("ConstLeafCommit", tt(CONST_LEAF_COMMIT), "constant-leaf commit")
+for c in CASES:
+    for col, nm, d in (("val_median_err_pct", "ValMedianErr", 1), ("val_p95_err_pct",
+                                                                    "ValPninetyfiveErr", 1)):
+        define(f"ConstLeaf{nm}{camel(c)}",
+               lambda c=c, col=col, d=d: pct(one(need(const_chosen, "case", col),
+                                                 const_chosen["case"] == c)[col], d),
+               f"{CONST_LEAF_COMMIT} chosen_models {c} {col}")  # fmt: skip
+define("ConstLeafGateMeanAcc",
+       lambda: pct(one(need(const_gate, "gate", "mean_acc_pct"),
+                       const_gate["gate"] == "ALL")["mean_acc_pct"], 2),
+       f"{CONST_LEAF_COMMIT} gate_results ALL mean_acc_pct")  # fmt: skip
+
+
+def _linear_table() -> str:
+    a = need(const_chosen, "case", "model", "val_median_err_pct", "val_p95_err_pct").set_index("case")
+    b = need(chosen, "case", "model", "val_median_err_pct", "val_p95_err_pct").set_index("case")
+    rows = [[tt(c), pct(a.loc[c, "val_median_err_pct"], 2), pct(b.loc[c, "val_median_err_pct"], 2),
+             pct(a.loc[c, "val_p95_err_pct"], 1), pct(b.loc[c, "val_p95_err_pct"], 1)]
+            for c in CASES]  # fmt: skip
+    g = need(const_gate, "gate", "mean_acc_pct")
+    rows.append([r"Gate mean acc.\ (all)", r"\multicolumn{2}{c}{"
+                 + pct(one(g, g["gate"] == "ALL")["mean_acc_pct"], 2) + r" $\to$ "
+                 + pct(gate_all("mean_acc_pct"), 2) + "}", "", ""])  # fmt: skip
+    head = (r"\begin{tabular}{lrrrr}" "\n" r"\toprule" "\n"
+            r" & \multicolumn{2}{c}{Val.\ median err.} & \multicolumn{2}{c}{Val.\ p95 err.} \\"
+            "\n" r"\cmidrule(lr){2-3}\cmidrule(lr){4-5}" "\n"
+            r"Case & constant & linear & constant & linear \\" "\n" r"\midrule" "\n")  # fmt: skip
+    body = "".join(" & ".join(r) + r" \\" "\n" + (r"\midrule" "\n" if i == 3 else "")
+                   for i, r in enumerate(rows))  # fmt: skip
+    return head + body + r"\bottomrule" "\n" r"\end{tabular}" "\n"
+
+
+write_table("linear_leaves", _linear_table,
+            f"chosen_models.csv and gate_results.csv at {CONST_LEAF_COMMIT} vs now")  # fmt: skip
+
+
+# ------------------------------------------------------------------ example netlist (verbatim)
+def _netlist_excerpt() -> str:
+    lines = (ROOT / "netlists" / "examples" / "fet_nmos_off.sp").read_text().splitlines()
+    keep = {"vth0", "toxe", "ndep", "u0", "xj", "rgatemod", "level"}
+    out, in_model, dropped = [], False, 0
+    for ln in lines:
+        if ln.lower().startswith(".model"):
+            in_model = True
+            out.append(ln)
+            continue
+        if in_model and ln.startswith("+"):
+            toks = ln[1:].split()
+            pairs, i = [], 0
+            while i + 2 < len(toks) + 1 and i < len(toks):
+                if i + 2 < len(toks) + 1 and toks[i + 1:i + 2] == ["="]:
+                    pairs.append((toks[i], toks[i + 2]))
+                    i += 3
+                elif "=" in toks[i]:
+                    k, _, v = toks[i].partition("=")
+                    if not v and i + 1 < len(toks):
+                        v, i = toks[i + 1], i + 1
+                    pairs.append((k, v))
+                    i += 1
+                else:
+                    i += 1
+            hit = [f"{k}={v}" for k, v in pairs if k.lower() in keep]
+            dropped += len(pairs) - len(hit)
+            if hit:
+                out.append("+ " + " ".join(hit))
+            continue
+        if in_model:
+            out.append("+ ... (all other parameters as in the model card)")
+            in_model = False
+        out.append(ln)
+    if any(len(x) > 95 for x in out):
+        raise ValueError("netlist line too long for verbatim")
+    return "\n".join(out)
+
+
+try:
+    (OUT / "netlist_fet_nmos_off.tex").write_text(
+        "% Generated by report/make_numbers.py from netlists/examples/fet_nmos_off.sp.\n"
+        "\\begin{verbatim}\n" + _netlist_excerpt() + "\n\\end{verbatim}\n"
+    )
+except Exception as e:  # noqa: BLE001
+    missing.append(f"netlists/examples/fet_nmos_off.sp excerpt ({type(e).__name__}: {e})")
+    (OUT / "netlist_fet_nmos_off.tex").write_text(r"\todo{missing: example netlist}" + "\n")
 
 # ================================================================== write numbers.tex
 lines = [

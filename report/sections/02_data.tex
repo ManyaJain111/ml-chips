@@ -1,4 +1,204 @@
 % Data generation
 \section{Data generation}\label{sec:data}
 
-\todo{sampling (incl. pinning), netlists, split, Kirchhoff check and trend plots, dataset size}
+\subsection{Cases and sampled variables}
+Four single-transistor datasets are generated, one per device and state. The case fixes the gate
+and body voltage (Table~\ref{tab:cases}); everything else is drawn at random, independently per
+row, with $V_{DD}$ drawn first because the ranges of $V_D$ and $V_S$ depend on it
+(Table~\ref{tab:ranges}). The process parameters are drawn separately for NMOS and PMOS around the
+nominal values parsed from the model card; the PMOS \texttt{vth0} is negative and the $\pm10\,\%$
+scaling keeps its sign.
+
+\begin{table}[H]
+  \centering
+  \caption{Fixed gate and body voltages of the four cases.}
+  \label{tab:cases}
+  \begin{tabular}{lcc}
+    \toprule
+    Case & $V_G$ & $V_B$ \\
+    \midrule
+    \texttt{nmos\_on}  & $V_{DD}$ & $0$ \\
+    \texttt{nmos\_off} & $0$      & $0$ \\
+    \texttt{pmos\_on}  & $0$      & $V_{DD}$ \\
+    \texttt{pmos\_off} & $V_{DD}$ & $V_{DD}$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \caption{Sampled inputs (base distribution, before the oversampling rules of
+  Section~\ref{sec:oversampling}).}
+  \label{tab:ranges}
+  \begin{tabular}{ll}
+    \toprule
+    Input & Distribution \\
+    \midrule
+    $V_{DD}$ & uniform, \VDDmin{} to \VDDmax{} (nominal $\pm$\VDDtol) \\
+    $V_D$, $V_S$ & uniform, $0$ to $V_{DD}$ of the same row \\
+    $W$ & uniform, \WMultMin{} to \WMultMax{} $\times L_{\min}$ \\
+    $T$ & uniform, \TempMin{} to \TempMax \\
+    \texttt{vth0}, \texttt{toxe}, \texttt{ndep}, \texttt{u0}, \texttt{xj} &
+      uniform, nominal $\pm$\ProcessTol, separate draws for NMOS and PMOS \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Oversampling of the operating points that matter}\label{sec:oversampling}
+Uniform $V_D$, $V_S$ almost never produce the bias points a transistor actually sees inside a
+static CMOS gate, and a regression model is least accurate where it has few neighbours. Five
+rules therefore replace part of the uniform draws. Each acts on a random subset of rows, all
+draws stay inside the ranges of Table~\ref{tab:ranges}, and the overridden voltages are rounded to
+the 10 significant digits the deck prints, so the stored inputs equal the simulated ones.
+\begin{itemize}
+  \item \textbf{Low $|V_{DS}|$ (ON cases).} An ON transistor in a static gate carries no DC
+        current, so its drain and source sit on the same node and $|V_{DS}|$ is essentially zero.
+        In \LowVdsFrac{} of the ON rows $V_D$ is replaced by $V_S \pm |V_{DS}|$ with $|V_{DS}|$
+        log-uniform in [\LowVdsMin, \LowVdsMax] and a random sign (reflected to stay in
+        $[0, V_{DD}]$). The log-uniform law covers the many decades over which the channel
+        current passes through zero.
+  \item \textbf{Source pinning (OFF cases).} An OFF transistor has its source on its own rail
+        (NMOS at $0$, PMOS at $V_{DD}$, i.e.\ at its body potential); inside a stack the source
+        is an internal node a small offset away. In \SourcePinFrac{} of the OFF rows $V_S$ is set
+        to the rail plus an offset log-uniform in [\PinMin, \PinMax], towards the inside of
+        $[0, V_{DD}]$.
+  \item \textbf{Drain pinning (OFF cases).} The OFF transistor that sets a gate's leakage also has
+        its drain on the opposite rail, $|V_{DS}| \approx V_{DD}$. With only the source pinned
+        very few rows sat at that point, and they had the largest validation error. An
+        independent \DrainPinFrac{} of the OFF rows get $V_D$ = opposite rail minus an offset
+        with the same law, so about \BothPinFrac{} of all OFF rows sit at the full-$V_{DD}$
+        OFF operating point.
+  \item \textbf{Stacks (ON and OFF).} Transistors in a series stack are covered by the two
+        rules above rather than by a separate rule: a stacked ON transistor again has
+        $|V_{DS}| \approx 0$, and the internal node of a stacked OFF pair lies within the
+        source-pinning offset range of its rail.
+        \todo{Confirm with Manya (P1): \texttt{sampling.py} has no separate stack-pinning rule
+        for the ON cases; if one was intended, add it to the code and describe it here.}
+  \item \textbf{Boundary rows (all cases).} Tree models degrade near the edges of the sampled
+        box, and the \NumCorners{} PVT corners of Parts~B and~C reach those edges too. In
+        \BoundaryFrac{} of the rows each of \BoundaryInputs{} is, with probability
+        \BoundaryPerInput, redrawn from the outer \BoundaryBand{} of its range at a random end.
+        This raises the share of rows within \BoundaryBand{} of each edge from
+        \BoundaryEdgeShareUniform{} to about \BoundaryEdgeShare. These draws come from a child
+        random stream, so they do not shift the other rules.
+\end{itemize}
+
+\paragraph{How the sampling was chosen.}
+Gate-level analysis identified which operating points were under-sampled; the added ranges were
+made deliberately wider than what the gates show; all model and hyperparameter choices were made
+on transistor validation data only. Validation and test rows are drawn by exactly the same
+procedure as the training rows, so every reported metric includes the oversampled points.
+
+\subsection{Dataset size}
+Each case has \RowsPerCase{} rows. The brief proposes \num{10000} rows (\num{7000} for training),
+but a learning curve with the chosen model recipe, refitted on nested subsets of the training
+split and scored on the same validation rows, showed the error still falling clearly at
+\num{7000} training rows. For example, the \texttt{nmos\_off} $I_D$ median error drops from
+\LCMedian{nmos_off}{id}{7000} at \num{7000} rows to \LCMedian{nmos_off}{id}{21000} at
+\LCMaxSize{} rows, and the \texttt{nmos\_on} $I_G$ median error from
+\LCMedian{nmos_on}{ig}{7000} to \LCMedian{nmos_on}{ig}{21000}
+(Figure~\ref{fig:lc}, Table~\ref{tab:lc}). Between \num{14000} and \LCMaxSize{} rows the gain is
+much smaller (\texttt{nmos\_off} $I_D$: \LCMedian{nmos_off}{id}{14000} $\to$
+\LCMedian{nmos_off}{id}{21000}), so the curve is flattening but has not saturated: more data
+would still help slightly, at a proportional SPICE and training cost.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{learning_curve.pdf}
+  \caption{Learning curve: validation 95th-percentile relative error of the chosen model recipe
+  against the number of training rows (log--log), per case and current. Notice that every
+  curve still slopes down at \num{7000} rows, the training size proposed in the brief, and only
+  starts to flatten towards \LCMaxSize{} rows. The ON-state $I_D$ and $I_S$ stay high and flat
+  for a different reason: their p95 is dominated by rows where the channel current crosses zero
+  (Section~\ref{sec:models}).}
+  \label{fig:lc}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{Learning curve: validation median relative error (\%) of the chosen model recipe
+  against the number of training rows.}
+  \label{tab:lc}
+  \input{generated/tab_learning}
+\end{table}
+
+\subsection{Netlists}
+Each row becomes one ngspice deck. The process parameters are applied by rewriting the
+\texttt{.model} block of the card with the drawn values, so every row is simulated with its own
+model card and no parameter can be missed. Every terminal has its own DC voltage source, as the
+brief requires, so the four terminal currents are read directly as the currents through
+\texttt{Vd}, \texttt{Vg}, \texttt{Vs}, \texttt{Vb}. Stored currents are positive \emph{into} the
+device terminal ($I_D = -\texttt{i(vd)}$, since ngspice reports source currents from the $+$ to
+the $-$ node). Rows whose simulation fails are dropped and topped up from the same random stream,
+so each file has exactly \RowsPerCase{} rows. Figure~\ref{fig:netlist} shows an example deck.
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}{0.92\linewidth}
+    \small
+    \input{generated/netlist_fet_nmos_off}
+  \end{minipage}
+  \caption{Example single-transistor deck (\texttt{nmos\_off}, first sample;
+  \texttt{netlists/examples/fet\_nmos\_off.sp}). Of the model card only the overridden
+  \texttt{rgatemod} and the five sampled process parameters are shown.}
+  \label{fig:netlist}
+\end{figure}
+
+\subsection{Train, validation and test split}
+Each dataset is shuffled with a fixed seed (\SeedSplit) and split \SplitScheme{} into
+\NTrain{} training, \NVal{} validation and \NTest{} test rows. The row indices of every split are
+saved in \texttt{artifacts/splits/}, so the split is auditable. Model types, hyperparameters and
+preprocessing are chosen on the validation rows only; the test rows are used exactly once, to
+report the chosen models (Section~\ref{sec:models}).
+
+\subsection{Data check}
+\paragraph{Kirchhoff's law.}
+The four terminal currents of a transistor must sum to zero. Table~\ref{tab:kirchhoff} lists the
+residual $|I_D+I_G+I_S+I_B|$ per case, absolute and relative to the largest of the four currents.
+For NMOS the relative residual is at the level of the solver tolerance (median
+\KirchhoffMedianRelNmosOn{} for \texttt{nmos\_on}, \KirchhoffMedianRelNmosOff{} for
+\texttt{nmos\_off}). For PMOS the absolute residual stays around $10^{-16}$\,A (p95
+\KirchhoffPninetyfiveAbsPmosOn{} ON, \KirchhoffPninetyfiveAbsPmosOff{} OFF), which we attribute
+to rounding in the body-resistance network that \texttt{rbodymod=1} adds; it only becomes visible
+in relative terms (up to \KirchhoffWorstRel) in rows where all four currents are themselves tiny.
+No row violates Kirchhoff's law beyond this numerical floor, which also confirms the sign
+convention.
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{Kirchhoff check (Deliverable~3): residual of the sum of the four terminal currents,
+  over all \RowsPerCase{} rows per case.}
+  \label{tab:kirchhoff}
+  \input{generated/tab_kirchhoff}
+\end{table}
+
+\paragraph{Trend plots.}
+Figure~\ref{fig:trends} checks that the data follow the expected device physics.
+\emph{OFF current vs temperature:} the median OFF current rises exponentially with $T$, because
+the thermal voltage grows and the threshold voltage falls with temperature, both raising the
+subthreshold current $\propto \exp\bigl((V_{GS}-V_{th})/(n v_T)\bigr)$.
+\emph{OFF current vs \texttt{vth0}:} within each device the current falls exponentially as
+$|V_{th0}|$ rises, the subthreshold slope at work; NMOS and PMOS form two offset bands because
+their nominal thresholds differ.
+\emph{Gate current vs \texttt{toxe}:} within each case the tunnelling current falls
+exponentially with oxide thickness. The ON cases, with the full $V_{DD}$ across an inverted
+channel, sit many decades above the OFF cases, where only the small gate--drain overlap
+tunnels.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.32\linewidth]{trend_ioff_vs_temp.pdf}\hfill
+  \includegraphics[width=0.32\linewidth]{trend_ioff_vs_vth0.pdf}\hfill
+  \includegraphics[width=0.32\linewidth]{trend_ig_vs_toxe.pdf}
+  \caption{Data-check trend plots (Deliverable~3). Left: OFF drain current against temperature.
+  Centre: OFF drain current against $|V_{th0}|$. Right: gate current against \texttt{toxe} for
+  all four cases. In the left and centre plots, look at the exponential trend of the binned
+  median, and at the floor near $10^{-14}$\,A, consistent with the default junction saturation
+  current of BSIM4 when the netlist gives no junction area. In the right plot, look at the
+  slope of each colour band; the pooled binned median jumps between the ON and OFF populations
+  and carries no meaning. The dense vertical strips at the range edges in every plot are the
+  boundary rows.}
+  \label{fig:trends}
+\end{figure}
