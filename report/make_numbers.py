@@ -864,15 +864,18 @@ for c in CASES:
     define(f"KclDerivedPninetyfive{camel(c)}", lambda c=c: _kcl_variant(c, True),
            f"model_search {c} is_kcl=True")  # fmt: skip
 
-# Linear-leaf improvement: the last run with constant-leaf GBDT is commit CONST_LEAF_COMMIT
-# (same data and grid; the only code change up to the linear-leaf run is linear_tree in zoo.py).
+# Linear-leaf improvement: the last run with constant-leaf GBDT is commit CONST_LEAF_COMMIT and
+# the first with linear leaves LINEAR_LEAF_COMMIT. Same data and grid; the only code change between
+# them is linear_tree in zoo.py. (The final run adds ON stack pinning, i.e. different ON data, so it
+# is not used for this comparison.)
 CONST_LEAF_COMMIT = "e7eb562"
+LINEAR_LEAF_COMMIT = "3208744"
 
 
-def git_csv(path: str) -> pd.DataFrame:
+def git_csv(path: str, commit: str = CONST_LEAF_COMMIT) -> pd.DataFrame:
     import io as _io
 
-    out = subprocess.run(["git", "-C", str(ROOT), "show", f"{CONST_LEAF_COMMIT}:{path}"],
+    out = subprocess.run(["git", "-C", str(ROOT), "show", f"{commit}:{path}"],
                          capture_output=True, text=True, check=True).stdout  # fmt: skip
     return pd.read_csv(_io.StringIO(out), dtype={"inputs": str})
 
@@ -883,6 +886,17 @@ try:
 except Exception as e:  # noqa: BLE001
     missing.append(f"constant-leaf baseline (git show {CONST_LEAF_COMMIT}): {e}")
     const_chosen = const_gate = None
+try:
+    lin_chosen = git_csv("results/tables/chosen_models.csv", LINEAR_LEAF_COMMIT)
+    lin_gate = git_csv("results/tables/gate_results.csv", LINEAR_LEAF_COMMIT)
+except Exception as e:  # noqa: BLE001
+    missing.append(f"linear-leaf run (git show {LINEAR_LEAF_COMMIT}): {e}")
+    lin_chosen = lin_gate = None
+define("LinLeafCommit", tt(LINEAR_LEAF_COMMIT), "linear-leaf commit")
+define("LinLeafGateMeanAcc",
+       lambda: pct(one(need(lin_gate, "gate", "mean_acc_pct"),
+                       lin_gate["gate"] == "ALL")["mean_acc_pct"], 2),
+       f"{LINEAR_LEAF_COMMIT} gate_results ALL mean_acc_pct")  # fmt: skip
 
 define("ConstLeafCommit", tt(CONST_LEAF_COMMIT), "constant-leaf commit")
 for c in CASES:
@@ -904,14 +918,15 @@ def _linear_table() -> str:
     a = need(const_chosen, "case", "model", "val_median_err_pct", "val_p95_err_pct").set_index(
         "case"
     )
-    b = need(chosen, "case", "model", "val_median_err_pct", "val_p95_err_pct").set_index("case")
+    b = need(lin_chosen, "case", "model", "val_median_err_pct", "val_p95_err_pct").set_index("case")
     rows = [[tt(c), pct(a.loc[c, "val_median_err_pct"], 2), pct(b.loc[c, "val_median_err_pct"], 2),
              pct(a.loc[c, "val_p95_err_pct"], 1), pct(b.loc[c, "val_p95_err_pct"], 1)]
             for c in CASES]  # fmt: skip
     g = need(const_gate, "gate", "mean_acc_pct")
     rows.append([r"Gate mean acc.\ (all)", r"\multicolumn{2}{c}{"
                  + pct(one(g, g["gate"] == "ALL")["mean_acc_pct"], 2) + r" $\to$ "
-                 + pct(gate_all("mean_acc_pct"), 2) + "}", "", ""])  # fmt: skip
+                 + pct(one(need(lin_gate, "gate", "mean_acc_pct"),
+                           lin_gate["gate"] == "ALL")["mean_acc_pct"], 2) + "}", "", ""])  # fmt: skip
     head = (r"\begin{tabular}{lrrrr}" "\n" r"\toprule" "\n"
             r" & \multicolumn{2}{c}{Val.\ median err.} & \multicolumn{2}{c}{Val.\ p95 err.} \\"
             "\n" r"\cmidrule(lr){2-3}\cmidrule(lr){4-5}" "\n"
@@ -922,7 +937,7 @@ def _linear_table() -> str:
 
 
 write_table("linear_leaves", _linear_table,
-            f"chosen_models.csv and gate_results.csv at {CONST_LEAF_COMMIT} vs now")  # fmt: skip
+            f"chosen_models.csv and gate_results.csv at {CONST_LEAF_COMMIT} vs {LINEAR_LEAF_COMMIT}")  # fmt: skip
 
 
 # ------------------------------------------------------------------ example netlists (verbatim)
@@ -1247,6 +1262,15 @@ def _driver(feature: str) -> str:
 
 
 define("CircuitTempRho", lambda: _driver("temp"), "circuit_error_drivers temp")
+define("CircuitVddRho", lambda: _driver("vdd"), "circuit_error_drivers vdd")
+
+
+def _gate_case_acc(gate: str, inputs: str) -> float:
+    d = need(gt, "gate", "inputs", "mean_acc_pct")
+    return float(one(d, (d["gate"] == gate) & (d["inputs"] == inputs))["mean_acc_pct"])
+
+
+define("GateNandTenAcc", lambda: pct(_gate_case_acc("NAND2", "10"), 1), "gate_results NAND2 10")
 
 
 # ------------------------------------------------------------------ error analysis (Section 6)

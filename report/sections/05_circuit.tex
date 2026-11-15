@@ -55,7 +55,7 @@ vector, the accuracy stays between \CircuitOnesAccMin{} and \CircuitOnesAccMax.
   \centering
   \includegraphics[width=0.6\linewidth]{circuit_parity.pdf}
   \caption{Circuit parity plot (D8), all \CircuitNumSims{} cases, coloured by temperature. The
-  coldest corners sit slightly above the diagonal (Section~\ref{sec:errcircuit}).}
+  error depends only weakly on the corner (Section~\ref{sec:errcircuit}).}
   \label{fig:circuitparity}
 \end{figure}
 
@@ -66,6 +66,6 @@ slightly \emph{more} accurate: \CircuitMeanAcc{} against \GateNandMeanAcc{} over
 \GateNandPninetyfiveErr, max \CircuitMaxErr{} vs \GateNandMaxErr). The circuit leakage is a sum
 over \CircuitNumGates{} instances in different input states, so the instance-to-instance part of
 the gate error partly cancels. The cancellation is incomplete because all instances share one
-corner, and a systematic bias does not cancel at all: the circuit bias (\CircuitBias) stays of the
-order of the NAND2 bias (\GateNandBias). The circuit accuracy is therefore limited by the
+corner, and a systematic bias does not cancel at all: the circuit bias (\CircuitBias) follows the
+bias of the loading term ($I_{in}$: \GateIinBias), not the NAND2 bias (\GateNandBias). The circuit accuracy is therefore limited by the
 systematic part of the transistor-model error, not by its scatter.

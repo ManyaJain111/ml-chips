@@ -76,9 +76,12 @@ against \GateHotMedianErr{} above \qty{80}{\degreeCelsius}, with the bias droppi
 \GateColdBias{} to \GateHotBias{} (Figure~\ref{fig:errcorner}). Of all corner parameters the signed
 error correlates most with \GateDriverFirst{} ($\rho=\GateDriverFirstRho$), then
 \GateDriverSecond{} and \GateDriverThird. The oracle attribution (Table~\ref{tab:errorsources})
-gives the mechanism: the largest single error source is \ErrorSourceFirst, the tunnelling current
-of the ON PMOS, which depends exponentially on the PMOS oxide thickness and makes up the largest
-share of the leakage when subthreshold conduction is weak, i.e.\ cold corners and high $|V_{th0}|$.
+gives the mechanism: the largest single error source is \ErrorSourceFirst, the source current of
+the upper OFF PMOS in the NOR2 \texttt{10}/\texttt{11} stack (whose drain sits on the internal
+node $y$, not on a rail), followed by \ErrorSourceSecond, the tunnelling current of the ON PMOS,
+which depends exponentially on the PMOS oxide thickness and makes up the largest share of the
+leakage when subthreshold conduction is weak, i.e.\ cold corners and high $|V_{th0}|$. Both are
+PMOS currents, which is why only PMOS parameters top the correlation list.
 Hot corners are dominated by OFF transistors at the pinned full-$V_{DD}$ point, which the models
 predict best.
 
@@ -110,10 +113,10 @@ a per cent or two.
 \subsection{Test circuit}\label{sec:errcircuit}
 Since the composition from SPICE gate values is exact (Section~\ref{sec:circuit}), the circuit
 error is the gate ML error accumulated over \CircuitNumGates{} instances plus the loading term.
-The part of that error that is common to a corner adds up instead of averaging out, which is
-visible in temperature: the circuit bias is \CircuitColdBias{} below \qty{0}{\degreeCelsius} and
-\CircuitHotBias{} above \qty{80}{\degreeCelsius}, and the median error falls from
-\CircuitColdMedianErr{} to \CircuitHotMedianErr. At cold corners the systematic PMOS tunnelling
-error dominates; at hot corners the remaining errors have mixed signs and cancel. Hence the signed
-circuit error correlates with temperature (Spearman $\rho=\CircuitTempRho$) much more than with the
-input vector.
+The part of that error that is common to a corner adds up instead of averaging out, so the
+circuit error depends on the corner rather than on the input vector: the median error falls from
+\CircuitColdMedianErr{} below \qty{0}{\degreeCelsius} to \CircuitHotMedianErr{} above
+\qty{80}{\degreeCelsius}, with a small bias at both ends (\CircuitColdBias{} and
+\CircuitHotBias). The signed circuit error correlates only weakly with any corner parameter, most
+with $V_{DD}$ (Spearman $\rho=\CircuitVddRho$) and temperature ($\rho=\CircuitTempRho$), and even
+less with the input vector.

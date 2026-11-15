@@ -3,29 +3,29 @@
 \toprule
 Gate & Inputs & SPICE median (A) & ML median (A) & Bias & Median err. & p95 err. & Mean acc. \\
 \midrule
-INV & \texttt{0} & \num{1.63e-11} & \num{1.64e-11} & \qty[retain-explicit-plus]{+1.30}{\percent} & \qty{2.04}{\percent} & \qty{5.58}{\percent} & \qty{97.59}{\percent} \\
+INV & \texttt{0} & \num{1.63e-11} & \num{1.64e-11} & \qty[retain-explicit-plus]{+0.17}{\percent} & \qty{0.98}{\percent} & \qty{2.93}{\percent} & \qty{98.85}{\percent} \\
  & \texttt{1} & \num{5.43e-12} & \num{5.37e-12} & \qty[retain-explicit-plus]{+0.17}{\percent} & \qty{1.34}{\percent} & \qty{4.07}{\percent} & \qty{98.45}{\percent} \\
 \midrule
-NAND2 & \texttt{00} & \num{1.79e-11} & \num{1.81e-11} & \qty[retain-explicit-plus]{+1.65}{\percent} & \qty{2.50}{\percent} & \qty{6.36}{\percent} & \qty{97.09}{\percent} \\
- & \texttt{01} & \num{1.63e-11} & \num{1.64e-11} & \qty[retain-explicit-plus]{+1.33}{\percent} & \qty{2.07}{\percent} & \qty{5.56}{\percent} & \qty{97.59}{\percent} \\
- & \texttt{10} & \num{1.34e-11} & \num{1.37e-11} & \qty[retain-explicit-plus]{+4.36}{\percent} & \qty{4.75}{\percent} & \qty{12.03}{\percent} & \qty{94.76}{\percent} \\
+NAND2 & \texttt{00} & \num{1.79e-11} & \num{1.79e-11} & \qty[retain-explicit-plus]{+0.14}{\percent} & \qty{1.16}{\percent} & \qty{3.39}{\percent} & \qty{98.66}{\percent} \\
+ & \texttt{01} & \num{1.63e-11} & \num{1.64e-11} & \qty[retain-explicit-plus]{+0.18}{\percent} & \qty{0.98}{\percent} & \qty{2.94}{\percent} & \qty{98.85}{\percent} \\
+ & \texttt{10} & \num{1.34e-11} & \num{1.31e-11} & \qty[retain-explicit-plus]{-0.60}{\percent} & \qty{1.62}{\percent} & \qty{8.63}{\percent} & \qty{97.39}{\percent} \\
  & \texttt{11} & \num{1.09e-11} & \num{1.07e-11} & \qty[retain-explicit-plus]{+0.17}{\percent} & \qty{1.34}{\percent} & \qty{4.06}{\percent} & \qty{98.46}{\percent} \\
 \midrule
-NOR2 & \texttt{00} & \num{3.27e-11} & \num{3.29e-11} & \qty[retain-explicit-plus]{+1.30}{\percent} & \qty{2.03}{\percent} & \qty{5.58}{\percent} & \qty{97.59}{\percent} \\
- & \texttt{01} & \num{1.80e-11} & \num{1.80e-11} & \qty[retain-explicit-plus]{+1.35}{\percent} & \qty{1.92}{\percent} & \qty{5.51}{\percent} & \qty{97.68}{\percent} \\
- & \texttt{10} & \num{2.94e-12} & \num{2.90e-12} & \qty[retain-explicit-plus]{+0.65}{\percent} & \qty{1.93}{\percent} & \qty{7.39}{\percent} & \qty{97.31}{\percent} \\
+NOR2 & \texttt{00} & \num{3.27e-11} & \num{3.29e-11} & \qty[retain-explicit-plus]{+0.14}{\percent} & \qty{0.96}{\percent} & \qty{2.85}{\percent} & \qty{98.86}{\percent} \\
+ & \texttt{01} & \num{1.80e-11} & \num{1.81e-11} & \qty[retain-explicit-plus]{+0.33}{\percent} & \qty{1.09}{\percent} & \qty{3.09}{\percent} & \qty{98.74}{\percent} \\
+ & \texttt{10} & \num{2.94e-12} & \num{2.90e-12} & \qty[retain-explicit-plus]{+0.67}{\percent} & \qty{1.95}{\percent} & \qty{7.38}{\percent} & \qty{97.30}{\percent} \\
  & \texttt{11} & \num{4.79e-13} & \num{4.71e-13} & \qty[retain-explicit-plus]{+0.49}{\percent} & \qty{2.33}{\percent} & \qty{7.53}{\percent} & \qty{97.10}{\percent} \\
 \midrule
-AND2 & \texttt{00} & \num{4.56e-11} & \num{4.60e-11} & \qty[retain-explicit-plus]{+0.81}{\percent} & \qty{1.68}{\percent} & \qty{4.67}{\percent} & \qty{97.98}{\percent} \\
- & \texttt{01} & \num{4.02e-11} & \num{4.12e-11} & \qty[retain-explicit-plus]{+0.48}{\percent} & \qty{1.27}{\percent} & \qty{4.19}{\percent} & \qty{98.35}{\percent} \\
- & \texttt{10} & \num{3.88e-11} & \num{3.92e-11} & \qty[retain-explicit-plus]{+1.39}{\percent} & \qty{1.88}{\percent} & \qty{6.21}{\percent} & \qty{97.54}{\percent} \\
- & \texttt{11} & \num{3.44e-11} & \num{3.53e-11} & \qty[retain-explicit-plus]{+1.06}{\percent} & \qty{1.40}{\percent} & \qty{5.27}{\percent} & \qty{98.11}{\percent} \\
+AND2 & \texttt{00} & \num{4.56e-11} & \num{4.55e-11} & \qty[retain-explicit-plus]{+0.18}{\percent} & \qty{0.91}{\percent} & \qty{2.82}{\percent} & \qty{98.89}{\percent} \\
+ & \texttt{01} & \num{4.02e-11} & \num{4.05e-11} & \qty[retain-explicit-plus]{+0.01}{\percent} & \qty{0.82}{\percent} & \qty{2.50}{\percent} & \qty{98.99}{\percent} \\
+ & \texttt{10} & \num{3.88e-11} & \num{3.84e-11} & \qty[retain-explicit-plus]{-0.41}{\percent} & \qty{1.16}{\percent} & \qty{4.03}{\percent} & \qty{98.59}{\percent} \\
+ & \texttt{11} & \num{3.44e-11} & \num{3.45e-11} & \qty[retain-explicit-plus]{+0.28}{\percent} & \qty{0.98}{\percent} & \qty{2.62}{\percent} & \qty{98.89}{\percent} \\
 \midrule
-OR2 & \texttt{00} & \num{5.91e-11} & \num{5.94e-11} & \qty[retain-explicit-plus]{+0.79}{\percent} & \qty{1.41}{\percent} & \qty{4.53}{\percent} & \qty{98.19}{\percent} \\
- & \texttt{01} & \num{3.49e-11} & \num{3.50e-11} & \qty[retain-explicit-plus]{+1.42}{\percent} & \qty{1.84}{\percent} & \qty{5.53}{\percent} & \qty{97.73}{\percent} \\
- & \texttt{10} & \num{2.23e-11} & \num{2.29e-11} & \qty[retain-explicit-plus]{+1.51}{\percent} & \qty{1.87}{\percent} & \qty{5.43}{\percent} & \qty{97.73}{\percent} \\
- & \texttt{11} & \num{1.80e-11} & \num{1.81e-11} & \qty[retain-explicit-plus]{+1.19}{\percent} & \qty{1.90}{\percent} & \qty{5.54}{\percent} & \qty{97.68}{\percent} \\
+OR2 & \texttt{00} & \num{5.91e-11} & \num{5.96e-11} & \qty[retain-explicit-plus]{+0.09}{\percent} & \qty{0.84}{\percent} & \qty{2.42}{\percent} & \qty{99.00}{\percent} \\
+ & \texttt{01} & \num{3.49e-11} & \num{3.49e-11} & \qty[retain-explicit-plus]{+0.27}{\percent} & \qty{1.04}{\percent} & \qty{2.85}{\percent} & \qty{98.86}{\percent} \\
+ & \texttt{10} & \num{2.23e-11} & \num{2.26e-11} & \qty[retain-explicit-plus]{+0.36}{\percent} & \qty{1.05}{\percent} & \qty{3.21}{\percent} & \qty{98.80}{\percent} \\
+ & \texttt{11} & \num{1.80e-11} & \num{1.79e-11} & \qty[retain-explicit-plus]{+0.19}{\percent} & \qty{0.95}{\percent} & \qty{2.80}{\percent} & \qty{98.90}{\percent} \\
 \midrule
-\textbf{All} &  & \num{2.01e-11} & \num{2.05e-11} & \qty[retain-explicit-plus]{+1.04}{\percent} & \qty{1.82}{\percent} & \qty{6.20}{\percent} & \qty{97.61}{\percent} \\
+\textbf{All} &  & \num{2.01e-11} & \num{2.02e-11} & \qty[retain-explicit-plus]{+0.15}{\percent} & \qty{1.13}{\percent} & \qty{4.13}{\percent} & \qty{98.53}{\percent} \\
 \bottomrule
 \end{tabular}

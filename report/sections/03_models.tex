@@ -56,10 +56,10 @@ The largest single improvement in the project came from one GBDT setting. With c
 the ensemble approximates the smooth log-current surface by a staircase, which left a floor of a
 few per cent in the median error. LightGBM's linear trees fit a small ridge model in each leaf;
 since log-current is nearly linear in our physics features, the staircase disappears.
-Table~\ref{tab:linear} compares the last constant-leaf run (\ConstLeafCommit, same data, grid
-and selection) with the final models: the validation median error roughly halves in every case,
-and the gate-level accuracy rises from \ConstLeafGateMeanAcc{} to the final value with no other
-change to the gate code.
+Table~\ref{tab:linear} compares the last constant-leaf run (\ConstLeafCommit) with the first
+linear-leaf run (\LinLeafCommit; same data, grid and selection): the validation median error
+roughly halves in every case, and the gate-level accuracy rises from \ConstLeafGateMeanAcc{} to
+\LinLeafGateMeanAcc{} with no other change to the gate code.
 
 \begin{table}[H]
   \centering

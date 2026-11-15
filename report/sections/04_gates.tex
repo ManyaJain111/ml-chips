@@ -90,14 +90,14 @@ With the same final models the direct sum reaches only \GateDirectMeanAcc{} (med
 \end{figure}
 
 \paragraph{Most and least accurate cases.}
-The most accurate case is \GateBestCase{} (\GateBestAcc): its leakage is set by OFF PMOS at the
-full-$V_{DD}$ OFF point that source and drain pinning oversample, while its ON NMOS are handled
-by KCL. The least accurate is \GateWorstCase{} (\GateWorstAcc). NAND2 \texttt{10} was the weakest
+The most accurate case is \GateBestCase{} (\GateBestAcc): its leakage is set by OFF transistors at
+the full-$V_{DD}$ OFF point that source and drain pinning oversample, while all its ON transistors
+are handled by KCL. The least accurate is \GateWorstCase{} (\GateWorstAcc). NAND2 \texttt{10} was the weakest
 case for most of the project: its upper NMOS is ON but can only pull $x$ to about a threshold
 below $V_{DD}$, so it conducts at a substantial $|V_{DS}|$, is not KCL-corrected, and its predicted
-drain current enters the output-node KCL. Replacing only that current with its SPICE value raised
-the case from \qty{94.8}{\percent} to \qty{97.6}{\percent}, which is why we added stack pinning
-(Section~\ref{sec:oversampling}); it lifted NAND2 \texttt{10} to \qty{97.4}{\percent}. The
+drain current enters the output-node KCL. Before stack pinning, replacing only that current with its SPICE
+value raised the case from \qty{94.8}{\percent} to \qty{97.6}{\percent}, which is why we added
+stack pinning (Section~\ref{sec:oversampling}); it lifted NAND2 \texttt{10} to \GateNandTenAcc. The
 worst individual rows are listed in Table~\ref{tab:gateworst}.
 
 \begin{table}[H]

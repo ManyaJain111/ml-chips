@@ -6,9 +6,10 @@ the test circuit, against a target of up to \qty{99}{\percent}. The composition 
 \OracleMeanAcc, circuit from SPICE gate values \CompSpiceMeanAcc), so the remaining gap is entirely
 transistor-model error. The limitations we see, and what we would do next:
 \begin{itemize}
-  \item \textbf{PMOS gate tunnelling} is the largest gate-level error source and is systematic
-        over a corner, so it does not average out in the circuit. Next: build the physical
-        $\exp(-\alpha\,t_{ox})$ dependence into a dedicated $I_G$ model.
+  \item \textbf{Stacked OFF PMOS and PMOS gate tunnelling} are the two largest gate-level error
+        sources (\ErrorSourceFirst, \ErrorSourceSecond). Next: oversample OFF PMOS with the
+        drain on an intermediate stack node, and build the physical $\exp(-\alpha\,t_{ox})$
+        dependence into a dedicated $I_G$ model.
   \item \textbf{SPICE node voltages are still required.} As the brief prescribes, the gate
         prediction reads internal node voltages from SPICE, so it is not yet SPICE-free. Next:
         solve KCL at the internal nodes with the ML currents and compare with SPICE.

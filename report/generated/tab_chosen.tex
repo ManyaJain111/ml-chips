@@ -3,20 +3,20 @@
 \toprule
 Case & Model & Current & Median err. & p95 err. & $R^2$ & Mean acc. & Bias & Excl. \\
 \midrule
-\texttt{nmos\_on} & GBDT & $I_D$ & \qty{8.43}{\percent} & \qty{90.9}{\percent} & \num{0.9637} & \qty{78.6}{\percent} & \qty[retain-explicit-plus]{-0.42}{\percent} & \num{9} \\
- &  & $I_G$ & \qty{2.70}{\percent} & \qty{15.6}{\percent} & \num{0.9994} & \qty{95.5}{\percent} & \qty[retain-explicit-plus]{-0.19}{\percent} & \num{1575} \\
- &  & $I_S$ & \qty{6.94}{\percent} & \qty{68.4}{\percent} & \num{0.9971} & \qty{59.1}{\percent} & \qty[retain-explicit-plus]{+0.16}{\percent} & \num{366} \\
- &  & $I_B$ & \qty{0.99}{\percent} & \qty{10.2}{\percent} & \num{0.9987} & \qty{97.2}{\percent} & \qty[retain-explicit-plus]{+0.01}{\percent} & \num{3} \\
+\texttt{nmos\_on} & GBDT & $I_D$ & \qty{9.00}{\percent} & \qty{91.1}{\percent} & \num{0.9566} & \qty{65.2}{\percent} & \qty[retain-explicit-plus]{-0.41}{\percent} & \num{9} \\
+ &  & $I_G$ & \qty{2.90}{\percent} & \qty{16.7}{\percent} & \num{0.9991} & \qty{94.9}{\percent} & \qty[retain-explicit-plus]{-0.06}{\percent} & \num{2023} \\
+ &  & $I_S$ & \qty{7.39}{\percent} & \qty{74.6}{\percent} & \num{0.9969} & \qty{59.2}{\percent} & \qty[retain-explicit-plus]{+0.08}{\percent} & \num{400} \\
+ &  & $I_B$ & \qty{0.78}{\percent} & \qty{9.8}{\percent} & \num{0.9988} & \qty{97.4}{\percent} & \qty[retain-explicit-plus]{-0.01}{\percent} & \num{3} \\
 \midrule
 \texttt{nmos\_off} & GBDT & $I_D$ & \qty{1.06}{\percent} & \qty{17.4}{\percent} & \num{0.9965} & \qty{94.7}{\percent} & \qty[retain-explicit-plus]{+0.00}{\percent} & \num{7} \\
  &  & $I_G$ & \multicolumn{5}{c}{all \num{4500} rows below \IFloor{} (median $|I|$ = \num{4.2e-23}\,A)} & \num{4500} \\
  &  & $I_S$ & \qty{2.04}{\percent} & \qty{23.3}{\percent} & \num{0.9972} & \qty{93.1}{\percent} & \qty[retain-explicit-plus]{+0.13}{\percent} & \num{1165} \\
  &  & $I_B$ & \qty{0.14}{\percent} & \qty{4.1}{\percent} & \num{0.9998} & \qty{99.1}{\percent} & \qty[retain-explicit-plus]{+0.01}{\percent} & \num{0} \\
 \midrule
-\texttt{pmos\_on} & GBDT & $I_D$ & \qty{8.45}{\percent} & \qty{93.9}{\percent} & \num{0.9618} & \qty{58.8}{\percent} & \qty[retain-explicit-plus]{-0.07}{\percent} & \num{7} \\
- &  & $I_G$ & \qty{2.18}{\percent} & \qty{12.3}{\percent} & \num{0.9995} & \qty{96.3}{\percent} & \qty[retain-explicit-plus]{+0.20}{\percent} & \num{1490} \\
- &  & $I_S$ & \qty{7.01}{\percent} & \qty{79.3}{\percent} & \num{0.9968} & \qty{61.8}{\percent} & \qty[retain-explicit-plus]{+0.05}{\percent} & \num{348} \\
- &  & $I_B$ & \qty{0.99}{\percent} & \qty{11.2}{\percent} & \num{0.9983} & \qty{97.0}{\percent} & \qty[retain-explicit-plus]{+0.02}{\percent} & \num{0} \\
+\texttt{pmos\_on} & GBDT & $I_D$ & \qty{8.45}{\percent} & \qty{92.7}{\percent} & \num{0.9609} & \qty{30.1}{\percent} & \qty[retain-explicit-plus]{-0.07}{\percent} & \num{7} \\
+ &  & $I_G$ & \qty{2.15}{\percent} & \qty{13.8}{\percent} & \num{0.9992} & \qty{95.9}{\percent} & \qty[retain-explicit-plus]{+0.27}{\percent} & \num{1947} \\
+ &  & $I_S$ & \qty{7.35}{\percent} & \qty{77.2}{\percent} & \num{0.9967} & \qty{30.9}{\percent} & \qty[retain-explicit-plus]{+0.12}{\percent} & \num{383} \\
+ &  & $I_B$ & \qty{0.82}{\percent} & \qty{9.7}{\percent} & \num{0.9981} & \qty{97.2}{\percent} & \qty[retain-explicit-plus]{+0.01}{\percent} & \num{0} \\
 \midrule
 \texttt{pmos\_off} & GBDT & $I_D$ & \qty{1.14}{\percent} & \qty{15.5}{\percent} & \num{0.9970} & \qty{95.4}{\percent} & \qty[retain-explicit-plus]{-0.01}{\percent} & \num{8} \\
  &  & $I_G$ & \multicolumn{5}{c}{all \num{4500} rows below \IFloor{} (median $|I|$ = \num{4.9e-23}\,A)} & \num{4500} \\
