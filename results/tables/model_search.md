@@ -1,50 +1,194 @@
-| case     | model   |   num_leaves |   learning_rate | is_kcl   |   p95_err_pct |   median_err_pct |   fit_s |
-|:---------|:--------|-------------:|----------------:|:---------|--------------:|-----------------:|--------:|
-| nmos_on  | gbdt    |           15 |            0.03 | False    |         59.19 |           13.07  |   8.943 |
-| nmos_on  | gbdt    |           15 |            0.03 | True     |         64.97 |           11.37  |   8.943 |
-| nmos_on  | gbdt    |           15 |            0.1  | False    |         58.1  |            9.393 |   8.762 |
-| nmos_on  | gbdt    |           15 |            0.1  | True     |         57.92 |            8.154 |   8.762 |
-| nmos_on  | gbdt    |           31 |            0.03 | False    |         56.79 |            8.394 |  14.83  |
-| nmos_on  | gbdt    |           31 |            0.03 | True     |         54.23 |            7.082 |  14.83  |
-| nmos_on  | gbdt    |           31 |            0.1  | False    |         58.16 |            7.229 |  14.51  |
-| nmos_on  | gbdt    |           31 |            0.1  | True     |         55.21 |            6.341 |  14.51  |
-| nmos_on  | gbdt    |           63 |            0.03 | False    |         52.18 |            5.607 |  27.38  |
-| nmos_on  | gbdt    |           63 |            0.03 | True     |         46.31 |            4.78  |  27.38  |
-| nmos_on  | gbdt    |           63 |            0.1  | False    |         57.46 |            6.824 |  29.22  |
-| nmos_on  | gbdt    |           63 |            0.1  | True     |         53.02 |            5.842 |  29.22  |
-| nmos_off | gbdt    |           15 |            0.03 | False    |         40.16 |            3.532 |   9.307 |
-| nmos_off | gbdt    |           15 |            0.03 | True     |         21.54 |            1.933 |   9.307 |
-| nmos_off | gbdt    |           15 |            0.1  | False    |         41.31 |            3.235 |   8.582 |
-| nmos_off | gbdt    |           15 |            0.1  | True     |         18.91 |            1.498 |   8.582 |
-| nmos_off | gbdt    |           31 |            0.03 | False    |         31.98 |            2.117 |  14.38  |
-| nmos_off | gbdt    |           31 |            0.03 | True     |         17.39 |            1.294 |  14.38  |
-| nmos_off | gbdt    |           31 |            0.1  | False    |         35.62 |            2.151 |  14.23  |
-| nmos_off | gbdt    |           31 |            0.1  | True     |         19.91 |            1.461 |  14.23  |
-| nmos_off | gbdt    |           63 |            0.03 | False    |         24.33 |            1.508 |  26.62  |
-| nmos_off | gbdt    |           63 |            0.03 | True     |         15.44 |            1.096 |  26.62  |
-| nmos_off | gbdt    |           63 |            0.1  | False    |         32.48 |            1.908 |  27.68  |
-| nmos_off | gbdt    |           63 |            0.1  | True     |         20.44 |            1.576 |  27.68  |
-| pmos_on  | gbdt    |           15 |            0.03 | False    |         58.32 |           13.21  |   9.42  |
-| pmos_on  | gbdt    |           15 |            0.03 | True     |         67.92 |           11.08  |   9.42  |
-| pmos_on  | gbdt    |           15 |            0.1  | False    |         60.64 |            9.545 |   9.213 |
-| pmos_on  | gbdt    |           15 |            0.1  | True     |         62    |            7.733 |   9.213 |
-| pmos_on  | gbdt    |           31 |            0.03 | False    |         56.44 |            8.235 |  15.83  |
-| pmos_on  | gbdt    |           31 |            0.03 | True     |         55.57 |            6.829 |  15.83  |
-| pmos_on  | gbdt    |           31 |            0.1  | False    |         57.92 |            6.987 |  15.7   |
-| pmos_on  | gbdt    |           31 |            0.1  | True     |         59.96 |            5.859 |  15.7   |
-| pmos_on  | gbdt    |           63 |            0.03 | False    |         54.3  |            5.445 |  29.45  |
-| pmos_on  | gbdt    |           63 |            0.03 | True     |         48.89 |            4.54  |  29.45  |
-| pmos_on  | gbdt    |           63 |            0.1  | False    |         58.05 |            6.411 |  29.9   |
-| pmos_on  | gbdt    |           63 |            0.1  | True     |         58.07 |            5.589 |  29.9   |
-| pmos_off | gbdt    |           15 |            0.03 | False    |         40.46 |            3.909 |  10.23  |
-| pmos_off | gbdt    |           15 |            0.03 | True     |         22.94 |            2.11  |  10.23  |
-| pmos_off | gbdt    |           15 |            0.1  | False    |         42.19 |            3.421 |  10.08  |
-| pmos_off | gbdt    |           15 |            0.1  | True     |         20.9  |            1.734 |  10.08  |
-| pmos_off | gbdt    |           31 |            0.03 | False    |         34    |            2.281 |  16.73  |
-| pmos_off | gbdt    |           31 |            0.03 | True     |         16.27 |            1.411 |  16.73  |
-| pmos_off | gbdt    |           31 |            0.1  | False    |         40.22 |            2.471 |  16.61  |
-| pmos_off | gbdt    |           31 |            0.1  | True     |         17.52 |            1.549 |  16.61  |
-| pmos_off | gbdt    |           63 |            0.03 | False    |         25.7  |            1.685 |  30.12  |
-| pmos_off | gbdt    |           63 |            0.03 | True     |         14.31 |            1.208 |  30.12  |
-| pmos_off | gbdt    |           63 |            0.1  | False    |         37.19 |            2.146 |  28.94  |
-| pmos_off | gbdt    |           63 |            0.1  | True     |         19.43 |            1.701 |  28.94  |
+| case     | model         |   degree |    alpha | is_kcl   |   p95_err_pct |   median_err_pct |    fit_s |   max_features |   min_samples_leaf |   num_leaves |   learning_rate | hidden_layer_sizes   |
+|:---------|:--------------|---------:|---------:|:---------|--------------:|-----------------:|---------:|---------------:|-------------------:|-------------:|----------------:|:---------------------|
+| nmos_on  | poly_ridge    |        2 |   1e-06  | False    |        242.9  |           58.75  |  0.1043  |         nan    |                nan |          nan |          nan    | nan                  |
+| nmos_on  | poly_ridge    |        2 |   1e-06  | True     |        284.4  |           54.54  |  0.1043  |         nan    |                nan |          nan |          nan    | nan                  |
+| nmos_on  | poly_ridge    |        2 |   0.0001 | False    |        243.3  |           58.63  |  0.09805 |         nan    |                nan |          nan |          nan    | nan                  |
+| nmos_on  | poly_ridge    |        2 |   0.0001 | True     |        285.4  |           54.37  |  0.09805 |         nan    |                nan |          nan |          nan    | nan                  |
+| nmos_on  | poly_ridge    |        2 |   0.01   | False    |        243.3  |           58.49  |  0.09307 |         nan    |                nan |          nan |          nan    | nan                  |
+| nmos_on  | poly_ridge    |        2 |   0.01   | True     |        283.7  |           54.3   |  0.09307 |         nan    |                nan |          nan |          nan    | nan                  |
+| nmos_on  | poly_ridge    |        3 |   1e-06  | False    |        303.5  |           54.26  |  2.311   |         nan    |                nan |          nan |          nan    | nan                  |
+| nmos_on  | poly_ridge    |        3 |   1e-06  | True     |        318.3  |           49.96  |  2.311   |         nan    |                nan |          nan |          nan    | nan                  |
+| nmos_on  | poly_ridge    |        3 |   0.0001 | False    |        289.7  |           54.03  |  0.9864  |         nan    |                nan |          nan |          nan    | nan                  |
+| nmos_on  | poly_ridge    |        3 |   0.0001 | True     |        309.7  |           49.85  |  0.9864  |         nan    |                nan |          nan |          nan    | nan                  |
+| nmos_on  | poly_ridge    |        3 |   0.01   | False    |        263.8  |           54.16  |  0.9974  |         nan    |                nan |          nan |          nan    | nan                  |
+| nmos_on  | poly_ridge    |        3 |   0.01   | True     |        289.3  |           49.54  |  0.9974  |         nan    |                nan |          nan |          nan    | nan                  |
+| nmos_on  | random_forest |      nan | nan      | False    |         90.42 |           23.73  |  2.259   |           0.33 |                  1 |          nan |          nan    | nan                  |
+| nmos_on  | random_forest |      nan | nan      | True     |        109    |           23.39  |  2.259   |           0.33 |                  1 |          nan |          nan    | nan                  |
+| nmos_on  | random_forest |      nan | nan      | False    |         93.97 |           24.93  |  1.919   |           0.33 |                  3 |          nan |          nan    | nan                  |
+| nmos_on  | random_forest |      nan | nan      | True     |        115.8  |           24.67  |  1.919   |           0.33 |                  3 |          nan |          nan    | nan                  |
+| nmos_on  | random_forest |      nan | nan      | False    |         87.04 |           21.9   |  4.205   |           0.66 |                  1 |          nan |          nan    | nan                  |
+| nmos_on  | random_forest |      nan | nan      | True     |        101    |           21.56  |  4.205   |           0.66 |                  1 |          nan |          nan    | nan                  |
+| nmos_on  | random_forest |      nan | nan      | False    |         89.17 |           23.42  |  3.614   |           0.66 |                  3 |          nan |          nan    | nan                  |
+| nmos_on  | random_forest |      nan | nan      | True     |        104.3  |           22.95  |  3.614   |           0.66 |                  3 |          nan |          nan    | nan                  |
+| nmos_on  | random_forest |      nan | nan      | False    |         87.52 |           22.61  |  6.44    |           1    |                  1 |          nan |          nan    | nan                  |
+| nmos_on  | random_forest |      nan | nan      | True     |        101    |           22.15  |  6.44    |           1    |                  1 |          nan |          nan    | nan                  |
+| nmos_on  | random_forest |      nan | nan      | False    |         90.62 |           24.15  |  5.565   |           1    |                  3 |          nan |          nan    | nan                  |
+| nmos_on  | random_forest |      nan | nan      | True     |        106.2  |           23.76  |  5.565   |           1    |                  3 |          nan |          nan    | nan                  |
+| nmos_on  | gbdt          |      nan | nan      | False    |         59.19 |           13.07  |  8.648   |         nan    |                nan |           15 |            0.03 | nan                  |
+| nmos_on  | gbdt          |      nan | nan      | True     |         64.97 |           11.37  |  8.648   |         nan    |                nan |           15 |            0.03 | nan                  |
+| nmos_on  | gbdt          |      nan | nan      | False    |         58.1  |            9.393 |  8.397   |         nan    |                nan |           15 |            0.1  | nan                  |
+| nmos_on  | gbdt          |      nan | nan      | True     |         57.92 |            8.154 |  8.397   |         nan    |                nan |           15 |            0.1  | nan                  |
+| nmos_on  | gbdt          |      nan | nan      | False    |         56.79 |            8.394 | 14.21    |         nan    |                nan |           31 |            0.03 | nan                  |
+| nmos_on  | gbdt          |      nan | nan      | True     |         54.23 |            7.082 | 14.21    |         nan    |                nan |           31 |            0.03 | nan                  |
+| nmos_on  | gbdt          |      nan | nan      | False    |         58.16 |            7.229 | 13.93    |         nan    |                nan |           31 |            0.1  | nan                  |
+| nmos_on  | gbdt          |      nan | nan      | True     |         55.21 |            6.341 | 13.93    |         nan    |                nan |           31 |            0.1  | nan                  |
+| nmos_on  | gbdt          |      nan | nan      | False    |         52.18 |            5.607 | 25.35    |         nan    |                nan |           63 |            0.03 | nan                  |
+| nmos_on  | gbdt          |      nan | nan      | True     |         46.31 |            4.78  | 25.35    |         nan    |                nan |           63 |            0.03 | nan                  |
+| nmos_on  | gbdt          |      nan | nan      | False    |         57.46 |            6.824 | 24.84    |         nan    |                nan |           63 |            0.1  | nan                  |
+| nmos_on  | gbdt          |      nan | nan      | True     |         53.02 |            5.842 | 24.84    |         nan    |                nan |           63 |            0.1  | nan                  |
+| nmos_on  | mlp           |      nan |   1e-05  | False    |         73.97 |           36.89  | 17.91    |         nan    |                nan |          nan |          nan    | (128, 128)           |
+| nmos_on  | mlp           |      nan |   1e-05  | True     |         89.13 |           35.18  | 17.91    |         nan    |                nan |          nan |          nan    | (128, 128)           |
+| nmos_on  | mlp           |      nan |   0.001  | False    |         74.74 |           36.72  | 18.44    |         nan    |                nan |          nan |          nan    | (128, 128)           |
+| nmos_on  | mlp           |      nan |   0.001  | True     |         89.97 |           35.31  | 18.44    |         nan    |                nan |          nan |          nan    | (128, 128)           |
+| nmos_on  | mlp           |      nan |   1e-05  | False    |         84.78 |           34.85  | 28.21    |         nan    |                nan |          nan |          nan    | (128, 128, 128)      |
+| nmos_on  | mlp           |      nan |   1e-05  | True     |        126    |           32.38  | 28.21    |         nan    |                nan |          nan |          nan    | (128, 128, 128)      |
+| nmos_on  | mlp           |      nan |   0.001  | False    |         82.32 |           33.4   | 27.44    |         nan    |                nan |          nan |          nan    | (128, 128, 128)      |
+| nmos_on  | mlp           |      nan |   0.001  | True     |        123.5  |           31.58  | 27.44    |         nan    |                nan |          nan |          nan    | (128, 128, 128)      |
+| nmos_on  | mlp           |      nan |   1e-05  | False    |         89.45 |           40.43  | 57.87    |         nan    |                nan |          nan |          nan    | (256, 256, 256)      |
+| nmos_on  | mlp           |      nan |   1e-05  | True     |        127    |           40.9   | 57.87    |         nan    |                nan |          nan |          nan    | (256, 256, 256)      |
+| nmos_on  | mlp           |      nan |   0.001  | False    |         78.3  |           39.29  | 78.31    |         nan    |                nan |          nan |          nan    | (256, 256, 256)      |
+| nmos_on  | mlp           |      nan |   0.001  | True     |         85.52 |           38.28  | 78.31    |         nan    |                nan |          nan |          nan    | (256, 256, 256)      |
+| nmos_off | poly_ridge    |        2 |   1e-06  | False    |        648.3  |           49.05  |  0.1138  |         nan    |                nan |          nan |          nan    | nan                  |
+| nmos_off | poly_ridge    |        2 |   1e-06  | True     |        347.9  |           29.35  |  0.1138  |         nan    |                nan |          nan |          nan    | nan                  |
+| nmos_off | poly_ridge    |        2 |   0.0001 | False    |        648.5  |           49.02  |  0.1472  |         nan    |                nan |          nan |          nan    | nan                  |
+| nmos_off | poly_ridge    |        2 |   0.0001 | True     |        346.8  |           29.27  |  0.1472  |         nan    |                nan |          nan |          nan    | nan                  |
+| nmos_off | poly_ridge    |        2 |   0.01   | False    |        667.7  |           49.09  |  0.1202  |         nan    |                nan |          nan |          nan    | nan                  |
+| nmos_off | poly_ridge    |        2 |   0.01   | True     |        346.1  |           29.45  |  0.1202  |         nan    |                nan |          nan |          nan    | nan                  |
+| nmos_off | poly_ridge    |        3 |   1e-06  | False    |        396.7  |           35.85  |  2.903   |         nan    |                nan |          nan |          nan    | nan                  |
+| nmos_off | poly_ridge    |        3 |   1e-06  | True     |        152.9  |           15.72  |  2.903   |         nan    |                nan |          nan |          nan    | nan                  |
+| nmos_off | poly_ridge    |        3 |   0.0001 | False    |        389.8  |           36.07  |  2.537   |         nan    |                nan |          nan |          nan    | nan                  |
+| nmos_off | poly_ridge    |        3 |   0.0001 | True     |        151.8  |           15.64  |  2.537   |         nan    |                nan |          nan |          nan    | nan                  |
+| nmos_off | poly_ridge    |        3 |   0.01   | False    |        353.2  |           37.38  |  2.384   |         nan    |                nan |          nan |          nan    | nan                  |
+| nmos_off | poly_ridge    |        3 |   0.01   | True     |        150.1  |           16.44  |  2.384   |         nan    |                nan |          nan |          nan    | nan                  |
+| nmos_off | random_forest |      nan | nan      | False    |         72.22 |           10.31  |  2.287   |           0.33 |                  1 |          nan |          nan    | nan                  |
+| nmos_off | random_forest |      nan | nan      | True     |         86.76 |            9.95  |  2.287   |           0.33 |                  1 |          nan |          nan    | nan                  |
+| nmos_off | random_forest |      nan | nan      | False    |         75.59 |           10.99  |  1.96    |           0.33 |                  3 |          nan |          nan    | nan                  |
+| nmos_off | random_forest |      nan | nan      | True     |         91.12 |           10.71  |  1.96    |           0.33 |                  3 |          nan |          nan    | nan                  |
+| nmos_off | random_forest |      nan | nan      | False    |         73.05 |            9.914 |  4.174   |           0.66 |                  1 |          nan |          nan    | nan                  |
+| nmos_off | random_forest |      nan | nan      | True     |         84.25 |            9.82  |  4.174   |           0.66 |                  1 |          nan |          nan    | nan                  |
+| nmos_off | random_forest |      nan | nan      | False    |         74.94 |           10.37  |  3.592   |           0.66 |                  3 |          nan |          nan    | nan                  |
+| nmos_off | random_forest |      nan | nan      | True     |         90.01 |           10.3   |  3.592   |           0.66 |                  3 |          nan |          nan    | nan                  |
+| nmos_off | random_forest |      nan | nan      | False    |         73.07 |            9.981 |  6.414   |           1    |                  1 |          nan |          nan    | nan                  |
+| nmos_off | random_forest |      nan | nan      | True     |         84.74 |            9.848 |  6.414   |           1    |                  1 |          nan |          nan    | nan                  |
+| nmos_off | random_forest |      nan | nan      | False    |         76.73 |           10.45  |  5.633   |           1    |                  3 |          nan |          nan    | nan                  |
+| nmos_off | random_forest |      nan | nan      | True     |         90.51 |           10.42  |  5.633   |           1    |                  3 |          nan |          nan    | nan                  |
+| nmos_off | gbdt          |      nan | nan      | False    |         40.16 |            3.532 |  9.032   |         nan    |                nan |           15 |            0.03 | nan                  |
+| nmos_off | gbdt          |      nan | nan      | True     |         21.54 |            1.933 |  9.032   |         nan    |                nan |           15 |            0.03 | nan                  |
+| nmos_off | gbdt          |      nan | nan      | False    |         41.31 |            3.235 |  8.701   |         nan    |                nan |           15 |            0.1  | nan                  |
+| nmos_off | gbdt          |      nan | nan      | True     |         18.91 |            1.498 |  8.701   |         nan    |                nan |           15 |            0.1  | nan                  |
+| nmos_off | gbdt          |      nan | nan      | False    |         31.98 |            2.117 | 14.72    |         nan    |                nan |           31 |            0.03 | nan                  |
+| nmos_off | gbdt          |      nan | nan      | True     |         17.39 |            1.294 | 14.72    |         nan    |                nan |           31 |            0.03 | nan                  |
+| nmos_off | gbdt          |      nan | nan      | False    |         35.62 |            2.151 | 14.23    |         nan    |                nan |           31 |            0.1  | nan                  |
+| nmos_off | gbdt          |      nan | nan      | True     |         19.91 |            1.461 | 14.23    |         nan    |                nan |           31 |            0.1  | nan                  |
+| nmos_off | gbdt          |      nan | nan      | False    |         24.33 |            1.508 | 26.23    |         nan    |                nan |           63 |            0.03 | nan                  |
+| nmos_off | gbdt          |      nan | nan      | True     |         15.44 |            1.096 | 26.23    |         nan    |                nan |           63 |            0.03 | nan                  |
+| nmos_off | gbdt          |      nan | nan      | False    |         32.48 |            1.908 | 25.66    |         nan    |                nan |           63 |            0.1  | nan                  |
+| nmos_off | gbdt          |      nan | nan      | True     |         20.44 |            1.576 | 25.66    |         nan    |                nan |           63 |            0.1  | nan                  |
+| nmos_off | mlp           |      nan |   1e-05  | False    |         66.13 |           14.25  | 34.99    |         nan    |                nan |          nan |          nan    | (128, 128)           |
+| nmos_off | mlp           |      nan |   1e-05  | True     |         42.3  |            6.894 | 34.99    |         nan    |                nan |          nan |          nan    | (128, 128)           |
+| nmos_off | mlp           |      nan |   0.001  | False    |         57.1  |           13.68  | 35.8     |         nan    |                nan |          nan |          nan    | (128, 128)           |
+| nmos_off | mlp           |      nan |   0.001  | True     |         38.92 |            5.637 | 35.8     |         nan    |                nan |          nan |          nan    | (128, 128)           |
+| nmos_off | mlp           |      nan |   1e-05  | False    |         52.07 |           13.92  | 40.63    |         nan    |                nan |          nan |          nan    | (128, 128, 128)      |
+| nmos_off | mlp           |      nan |   1e-05  | True     |         43.76 |            9.006 | 40.63    |         nan    |                nan |          nan |          nan    | (128, 128, 128)      |
+| nmos_off | mlp           |      nan |   0.001  | False    |         57.26 |           13.4   | 48.52    |         nan    |                nan |          nan |          nan    | (128, 128, 128)      |
+| nmos_off | mlp           |      nan |   0.001  | True     |         41.69 |            8.45  | 48.52    |         nan    |                nan |          nan |          nan    | (128, 128, 128)      |
+| nmos_off | mlp           |      nan |   1e-05  | False    |         68.02 |           16.1   | 95.97    |         nan    |                nan |          nan |          nan    | (256, 256, 256)      |
+| nmos_off | mlp           |      nan |   1e-05  | True     |         50.06 |            8.457 | 95.97    |         nan    |                nan |          nan |          nan    | (256, 256, 256)      |
+| nmos_off | mlp           |      nan |   0.001  | False    |         61.02 |           13.72  | 90.62    |         nan    |                nan |          nan |          nan    | (256, 256, 256)      |
+| nmos_off | mlp           |      nan |   0.001  | True     |         46.64 |            8.278 | 90.62    |         nan    |                nan |          nan |          nan    | (256, 256, 256)      |
+| pmos_on  | poly_ridge    |        2 |   1e-06  | False    |        254.8  |           60.46  |  0.08758 |         nan    |                nan |          nan |          nan    | nan                  |
+| pmos_on  | poly_ridge    |        2 |   1e-06  | True     |        283.3  |           54.23  |  0.08758 |         nan    |                nan |          nan |          nan    | nan                  |
+| pmos_on  | poly_ridge    |        2 |   0.0001 | False    |        255.6  |           60.38  |  0.09251 |         nan    |                nan |          nan |          nan    | nan                  |
+| pmos_on  | poly_ridge    |        2 |   0.0001 | True     |        283    |           54.12  |  0.09251 |         nan    |                nan |          nan |          nan    | nan                  |
+| pmos_on  | poly_ridge    |        2 |   0.01   | False    |        250.3  |           59.95  |  0.1623  |         nan    |                nan |          nan |          nan    | nan                  |
+| pmos_on  | poly_ridge    |        2 |   0.01   | True     |        283.4  |           54.04  |  0.1623  |         nan    |                nan |          nan |          nan    | nan                  |
+| pmos_on  | poly_ridge    |        3 |   1e-06  | False    |        374.9  |           56.31  |  2.37    |         nan    |                nan |          nan |          nan    | nan                  |
+| pmos_on  | poly_ridge    |        3 |   1e-06  | True     |        317.4  |           50.61  |  2.37    |         nan    |                nan |          nan |          nan    | nan                  |
+| pmos_on  | poly_ridge    |        3 |   0.0001 | False    |        342.8  |           55.96  |  1.852   |         nan    |                nan |          nan |          nan    | nan                  |
+| pmos_on  | poly_ridge    |        3 |   0.0001 | True     |        298.5  |           50.21  |  1.852   |         nan    |                nan |          nan |          nan    | nan                  |
+| pmos_on  | poly_ridge    |        3 |   0.01   | False    |        328.8  |           56.09  |  1.897   |         nan    |                nan |          nan |          nan    | nan                  |
+| pmos_on  | poly_ridge    |        3 |   0.01   | True     |        278    |           49.95  |  1.897   |         nan    |                nan |          nan |          nan    | nan                  |
+| pmos_on  | random_forest |      nan | nan      | False    |         89.95 |           23.83  |  2.216   |           0.33 |                  1 |          nan |          nan    | nan                  |
+| pmos_on  | random_forest |      nan | nan      | True     |        113    |           23.35  |  2.216   |           0.33 |                  1 |          nan |          nan    | nan                  |
+| pmos_on  | random_forest |      nan | nan      | False    |         94.36 |           25.66  |  1.915   |           0.33 |                  3 |          nan |          nan    | nan                  |
+| pmos_on  | random_forest |      nan | nan      | True     |        119.9  |           25.13  |  1.915   |           0.33 |                  3 |          nan |          nan    | nan                  |
+| pmos_on  | random_forest |      nan | nan      | False    |         87.54 |           21.62  |  4.222   |           0.66 |                  1 |          nan |          nan    | nan                  |
+| pmos_on  | random_forest |      nan | nan      | True     |        105.4  |           21.29  |  4.222   |           0.66 |                  1 |          nan |          nan    | nan                  |
+| pmos_on  | random_forest |      nan | nan      | False    |         91.76 |           23.11  |  3.612   |           0.66 |                  3 |          nan |          nan    | nan                  |
+| pmos_on  | random_forest |      nan | nan      | True     |        111.6  |           22.64  |  3.612   |           0.66 |                  3 |          nan |          nan    | nan                  |
+| pmos_on  | random_forest |      nan | nan      | False    |         87.91 |           22.1   |  6.355   |           1    |                  1 |          nan |          nan    | nan                  |
+| pmos_on  | random_forest |      nan | nan      | True     |        108.8  |           21.76  |  6.355   |           1    |                  1 |          nan |          nan    | nan                  |
+| pmos_on  | random_forest |      nan | nan      | False    |         92.17 |           23.41  |  5.587   |           1    |                  3 |          nan |          nan    | nan                  |
+| pmos_on  | random_forest |      nan | nan      | True     |        113.9  |           23     |  5.587   |           1    |                  3 |          nan |          nan    | nan                  |
+| pmos_on  | gbdt          |      nan | nan      | False    |         58.32 |           13.21  |  8.713   |         nan    |                nan |           15 |            0.03 | nan                  |
+| pmos_on  | gbdt          |      nan | nan      | True     |         67.92 |           11.08  |  8.713   |         nan    |                nan |           15 |            0.03 | nan                  |
+| pmos_on  | gbdt          |      nan | nan      | False    |         60.64 |            9.545 |  8.436   |         nan    |                nan |           15 |            0.1  | nan                  |
+| pmos_on  | gbdt          |      nan | nan      | True     |         62    |            7.733 |  8.436   |         nan    |                nan |           15 |            0.1  | nan                  |
+| pmos_on  | gbdt          |      nan | nan      | False    |         56.44 |            8.235 | 14.25    |         nan    |                nan |           31 |            0.03 | nan                  |
+| pmos_on  | gbdt          |      nan | nan      | True     |         55.57 |            6.829 | 14.25    |         nan    |                nan |           31 |            0.03 | nan                  |
+| pmos_on  | gbdt          |      nan | nan      | False    |         57.92 |            6.987 | 13.86    |         nan    |                nan |           31 |            0.1  | nan                  |
+| pmos_on  | gbdt          |      nan | nan      | True     |         59.96 |            5.859 | 13.86    |         nan    |                nan |           31 |            0.1  | nan                  |
+| pmos_on  | gbdt          |      nan | nan      | False    |         54.3  |            5.445 | 25.33    |         nan    |                nan |           63 |            0.03 | nan                  |
+| pmos_on  | gbdt          |      nan | nan      | True     |         48.89 |            4.54  | 25.33    |         nan    |                nan |           63 |            0.03 | nan                  |
+| pmos_on  | gbdt          |      nan | nan      | False    |         58.05 |            6.411 | 24.84    |         nan    |                nan |           63 |            0.1  | nan                  |
+| pmos_on  | gbdt          |      nan | nan      | True     |         58.07 |            5.589 | 24.84    |         nan    |                nan |           63 |            0.1  | nan                  |
+| pmos_on  | mlp           |      nan |   1e-05  | False    |         95.83 |           45.01  | 18.6     |         nan    |                nan |          nan |          nan    | (128, 128)           |
+| pmos_on  | mlp           |      nan |   1e-05  | True     |        152.4  |           40.87  | 18.6     |         nan    |                nan |          nan |          nan    | (128, 128)           |
+| pmos_on  | mlp           |      nan |   0.001  | False    |         95.98 |           44.5   | 18.32    |         nan    |                nan |          nan |          nan    | (128, 128)           |
+| pmos_on  | mlp           |      nan |   0.001  | True     |        153.7  |           40.41  | 18.32    |         nan    |                nan |          nan |          nan    | (128, 128)           |
+| pmos_on  | mlp           |      nan |   1e-05  | False    |        114.4  |           45.71  | 27.37    |         nan    |                nan |          nan |          nan    | (128, 128, 128)      |
+| pmos_on  | mlp           |      nan |   1e-05  | True     |        120.7  |           32.49  | 27.37    |         nan    |                nan |          nan |          nan    | (128, 128, 128)      |
+| pmos_on  | mlp           |      nan |   0.001  | False    |        107    |           44.59  | 28.63    |         nan    |                nan |          nan |          nan    | (128, 128, 128)      |
+| pmos_on  | mlp           |      nan |   0.001  | True     |        111.3  |           32.8   | 28.63    |         nan    |                nan |          nan |          nan    | (128, 128, 128)      |
+| pmos_on  | mlp           |      nan |   1e-05  | False    |        126.7  |           47.4   | 57.44    |         nan    |                nan |          nan |          nan    | (256, 256, 256)      |
+| pmos_on  | mlp           |      nan |   1e-05  | True     |        140.9  |           38.79  | 57.44    |         nan    |                nan |          nan |          nan    | (256, 256, 256)      |
+| pmos_on  | mlp           |      nan |   0.001  | False    |         98.5  |           35.55  | 62.1     |         nan    |                nan |          nan |          nan    | (256, 256, 256)      |
+| pmos_on  | mlp           |      nan |   0.001  | True     |         99.32 |           29.37  | 62.1     |         nan    |                nan |          nan |          nan    | (256, 256, 256)      |
+| pmos_off | poly_ridge    |        2 |   1e-06  | False    |       1005    |           48.39  |  0.115   |         nan    |                nan |          nan |          nan    | nan                  |
+| pmos_off | poly_ridge    |        2 |   1e-06  | True     |        333.2  |           28.94  |  0.115   |         nan    |                nan |          nan |          nan    | nan                  |
+| pmos_off | poly_ridge    |        2 |   0.0001 | False    |       1007    |           48.44  |  0.09149 |         nan    |                nan |          nan |          nan    | nan                  |
+| pmos_off | poly_ridge    |        2 |   0.0001 | True     |        332.7  |           28.9   |  0.09149 |         nan    |                nan |          nan |          nan    | nan                  |
+| pmos_off | poly_ridge    |        2 |   0.01   | False    |       1011    |           48.3   |  0.09222 |         nan    |                nan |          nan |          nan    | nan                  |
+| pmos_off | poly_ridge    |        2 |   0.01   | True     |        333.5  |           28.78  |  0.09222 |         nan    |                nan |          nan |          nan    | nan                  |
+| pmos_off | poly_ridge    |        3 |   1e-06  | False    |        407.9  |           33.68  |  1.833   |         nan    |                nan |          nan |          nan    | nan                  |
+| pmos_off | poly_ridge    |        3 |   1e-06  | True     |        149.1  |           14.88  |  1.833   |         nan    |                nan |          nan |          nan    | nan                  |
+| pmos_off | poly_ridge    |        3 |   0.0001 | False    |        394.4  |           33.51  |  1.463   |         nan    |                nan |          nan |          nan    | nan                  |
+| pmos_off | poly_ridge    |        3 |   0.0001 | True     |        148.9  |           14.78  |  1.463   |         nan    |                nan |          nan |          nan    | nan                  |
+| pmos_off | poly_ridge    |        3 |   0.01   | False    |        362.5  |           35.79  |  1.191   |         nan    |                nan |          nan |          nan    | nan                  |
+| pmos_off | poly_ridge    |        3 |   0.01   | True     |        150.2  |           15.49  |  1.191   |         nan    |                nan |          nan |          nan    | nan                  |
+| pmos_off | random_forest |      nan | nan      | False    |         72.02 |           10.41  |  2.295   |           0.33 |                  1 |          nan |          nan    | nan                  |
+| pmos_off | random_forest |      nan | nan      | True     |         83.89 |           10.32  |  2.295   |           0.33 |                  1 |          nan |          nan    | nan                  |
+| pmos_off | random_forest |      nan | nan      | False    |         74.2  |           11.18  |  1.931   |           0.33 |                  3 |          nan |          nan    | nan                  |
+| pmos_off | random_forest |      nan | nan      | True     |         89.01 |           11.14  |  1.931   |           0.33 |                  3 |          nan |          nan    | nan                  |
+| pmos_off | random_forest |      nan | nan      | False    |         70.12 |            9.604 |  4.155   |           0.66 |                  1 |          nan |          nan    | nan                  |
+| pmos_off | random_forest |      nan | nan      | True     |         79.32 |            9.491 |  4.155   |           0.66 |                  1 |          nan |          nan    | nan                  |
+| pmos_off | random_forest |      nan | nan      | False    |         72.33 |           10.17  |  3.595   |           0.66 |                  3 |          nan |          nan    | nan                  |
+| pmos_off | random_forest |      nan | nan      | True     |         83.68 |           10.03  |  3.595   |           0.66 |                  3 |          nan |          nan    | nan                  |
+| pmos_off | random_forest |      nan | nan      | False    |         69.65 |            9.664 |  6.379   |           1    |                  1 |          nan |          nan    | nan                  |
+| pmos_off | random_forest |      nan | nan      | True     |         77.13 |            9.408 |  6.379   |           1    |                  1 |          nan |          nan    | nan                  |
+| pmos_off | random_forest |      nan | nan      | False    |         72.09 |           10.01  |  5.573   |           1    |                  3 |          nan |          nan    | nan                  |
+| pmos_off | random_forest |      nan | nan      | True     |         83.92 |            9.959 |  5.573   |           1    |                  3 |          nan |          nan    | nan                  |
+| pmos_off | gbdt          |      nan | nan      | False    |         40.46 |            3.909 |  8.726   |         nan    |                nan |           15 |            0.03 | nan                  |
+| pmos_off | gbdt          |      nan | nan      | True     |         22.94 |            2.11  |  8.726   |         nan    |                nan |           15 |            0.03 | nan                  |
+| pmos_off | gbdt          |      nan | nan      | False    |         42.19 |            3.421 |  8.589   |         nan    |                nan |           15 |            0.1  | nan                  |
+| pmos_off | gbdt          |      nan | nan      | True     |         20.9  |            1.734 |  8.589   |         nan    |                nan |           15 |            0.1  | nan                  |
+| pmos_off | gbdt          |      nan | nan      | False    |         34    |            2.281 | 14.3     |         nan    |                nan |           31 |            0.03 | nan                  |
+| pmos_off | gbdt          |      nan | nan      | True     |         16.27 |            1.411 | 14.3     |         nan    |                nan |           31 |            0.03 | nan                  |
+| pmos_off | gbdt          |      nan | nan      | False    |         40.22 |            2.471 | 13.99    |         nan    |                nan |           31 |            0.1  | nan                  |
+| pmos_off | gbdt          |      nan | nan      | True     |         17.52 |            1.549 | 13.99    |         nan    |                nan |           31 |            0.1  | nan                  |
+| pmos_off | gbdt          |      nan | nan      | False    |         25.7  |            1.685 | 25.43    |         nan    |                nan |           63 |            0.03 | nan                  |
+| pmos_off | gbdt          |      nan | nan      | True     |         14.31 |            1.208 | 25.43    |         nan    |                nan |           63 |            0.03 | nan                  |
+| pmos_off | gbdt          |      nan | nan      | False    |         37.19 |            2.146 | 24.74    |         nan    |                nan |           63 |            0.1  | nan                  |
+| pmos_off | gbdt          |      nan | nan      | True     |         19.43 |            1.701 | 24.74    |         nan    |                nan |           63 |            0.1  | nan                  |
+| pmos_off | mlp           |      nan |   1e-05  | False    |         78.3  |           16.08  | 31.72    |         nan    |                nan |          nan |          nan    | (128, 128)           |
+| pmos_off | mlp           |      nan |   1e-05  | True     |         46.97 |            7.053 | 31.72    |         nan    |                nan |          nan |          nan    | (128, 128)           |
+| pmos_off | mlp           |      nan |   0.001  | False    |         66.48 |           11.75  | 46.39    |         nan    |                nan |          nan |          nan    | (128, 128)           |
+| pmos_off | mlp           |      nan |   0.001  | True     |         39.64 |            6.378 | 46.39    |         nan    |                nan |          nan |          nan    | (128, 128)           |
+| pmos_off | mlp           |      nan |   1e-05  | False    |         52.68 |           11.37  | 41.14    |         nan    |                nan |          nan |          nan    | (128, 128, 128)      |
+| pmos_off | mlp           |      nan |   1e-05  | True     |         38.65 |            8.032 | 41.14    |         nan    |                nan |          nan |          nan    | (128, 128, 128)      |
+| pmos_off | mlp           |      nan |   0.001  | False    |         51.85 |           12.29  | 44.5     |         nan    |                nan |          nan |          nan    | (128, 128, 128)      |
+| pmos_off | mlp           |      nan |   0.001  | True     |         42.98 |            8.541 | 44.5     |         nan    |                nan |          nan |          nan    | (128, 128, 128)      |
+| pmos_off | mlp           |      nan |   1e-05  | False    |         61.6  |           11.48  | 89.65    |         nan    |                nan |          nan |          nan    | (256, 256, 256)      |
+| pmos_off | mlp           |      nan |   1e-05  | True     |         57.62 |           10.01  | 89.65    |         nan    |                nan |          nan |          nan    | (256, 256, 256)      |
+| pmos_off | mlp           |      nan |   0.001  | False    |         63.12 |           15.84  | 81.04    |         nan    |                nan |          nan |          nan    | (256, 256, 256)      |
+| pmos_off | mlp           |      nan |   0.001  | True     |         49.61 |            7.104 | 81.04    |         nan    |                nan |          nan |          nan    | (256, 256, 256)      |
