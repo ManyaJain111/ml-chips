@@ -1,0 +1,17 @@
+# LaTeX build output (if compiled locally; normally compiled on Overleaf)
+*.pdf
+!figures/*.pdf
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.bbl
+*.blg
+*.xdv
+# Overleaf upload bundle, rebuilt by make_numbers.py
+overleaf.zip

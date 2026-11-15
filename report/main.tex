@@ -1,0 +1,60 @@
+% ML-Based Leakage Current Estimation for Static CMOS -- course project report (D10).
+% Compiled on Overleaf (pdfLaTeX): upload report/overleaf.zip, see README.md.
+% Every number comes from generated/numbers.tex and generated/tab_*.tex (report/make_numbers.py).
+
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=2.5cm]{geometry}
+\usepackage[T1]{fontenc}   % proper glyphs for _ < > | in \texttt and generated text
+\usepackage{lmodern}
+\usepackage{amsmath}
+\usepackage{array}         % needed by sections/p2_transistor.tex
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{xcolor}
+\usepackage{caption}
+\usepackage{siunitx}       % v3 (\qty) -- default on Overleaf
+\usepackage{hyperref}      % load last
+
+\graphicspath{{figures/}}
+\captionsetup{font=small, labelfont=bf}
+\sisetup{exponent-product = \times}
+\hypersetup{colorlinks=true, linkcolor=blue!50!black, urlcolor=blue!50!black,
+            citecolor=blue!50!black}
+
+% Placeholder for text still to be written (also used by generated/numbers.tex for
+% missing inputs). Search the PDF for "TODO" before submitting.
+\newcommand{\todo}[1]{\textcolor{red}{\textbf{[TODO: #1]}}}
+
+\input{generated/numbers}
+
+\title{ML-Based Leakage Current Estimation for Static CMOS\\
+       (32nm LP, 8-bit Parity Checker)}
+\author{Team \emph{Hot Hot Chips}\\[2mm]
+        Manya \and Joanna \and Sindhuja \and Gopal}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\todo{abstract: goal, method (single-FET SPICE $\to$ four ML models $\to$ gates $\to$ test
+circuit), headline accuracies (\GateMeanAcc{} gate, \CircuitMeanAcc{} circuit) against the
+99\,\% target, and the main limitation.}
+\end{abstract}
+
+\tableofcontents
+
+\input{sections/01_setup}
+\input{sections/02_data}
+\input{sections/03_models}
+\input{sections/04_gates}
+\input{sections/05_circuit}
+\input{sections/06_error}
+\input{sections/07_limitations}
+
+\appendix
+\input{sections/08_appendix}
+
+\end{document}
