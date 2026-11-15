@@ -36,6 +36,13 @@ SOURCE_PIN_CASES: frozenset[Case] = frozenset({Case.NMOS_OFF, Case.PMOS_OFF})
 SOURCE_PIN_FRAC = 0.4
 SOURCE_PIN_RANGE = (1e-9, 1e-1)  # volts
 
+# Drain pinning for the OFF cases (SPEC §4.1). The OFF FET that sets a static gate's leakage has
+# its drain on the OTHER rail (NMOS: vdd, PMOS: 0), i.e. |vds| ~ VDD. With only the source pinned,
+# ~4 % of OFF rows had |vds| > 0.9 VDD, and those had the largest validation error. An independent
+# DRAIN_PIN_FRAC of OFF rows get vd = other rail ∓ offset (offset log-uniform in SOURCE_PIN_RANGE),
+# so ~DRAIN_PIN_FRAC * SOURCE_PIN_FRAC of rows sit at the full-VDD operating point. Drawn last.
+DRAIN_PIN_FRAC = 0.5
+
 # Boundary oversampling, all cases (SPEC §4.1). Tree models are least accurate near the edges of
 # the sampled box (fewer neighbours; on the 10k data the OFF-case validation p95 was ~58 % for rows
 # within 5 % of an edge vs ~45 % inside), and the 200 corners reach those edges too. A fraction
@@ -122,6 +129,20 @@ def _pin_source(
     return vs
 
 
+def _pin_drain(
+    vd: np.ndarray, vdd: np.ndarray, device: str, rng: np.random.Generator
+) -> np.ndarray:
+    """Pin vd to the rail opposite the device's source (- a small offset) on DRAIN_PIN_FRAC rows."""
+    n = len(vd)
+    pin = rng.random(n) < DRAIN_PIN_FRAC
+    lo, hi = np.log10(SOURCE_PIN_RANGE[0]), np.log10(SOURCE_PIN_RANGE[1])
+    offset = 10.0 ** rng.uniform(lo, hi, n)
+    new_vd = vdd - offset if device == "nmos" else offset
+    vd = vd.copy()
+    vd[pin] = np.clip(_as_in_deck(new_vd[pin]), 0.0, vdd[pin])
+    return vd
+
+
 def draw_transistor_samples(
     case: Case | str,
     n: int,
@@ -167,6 +188,7 @@ def draw_transistor_samples(
         vd, vs = _low_vds_vd(vd, vs, vdd, rng)
     if case in SOURCE_PIN_CASES:
         vs = _pin_source(vs, vdd, CASE_DEVICE[case], rng)
+        vd = _pin_drain(vd, vdd, CASE_DEVICE[case], rng)
     bias = CASE_BIAS[case]
     vg = vdd if bias["vg"] == "vdd" else np.zeros(n)
     vb = vdd if bias["vb"] == "vdd" else np.zeros(n)
