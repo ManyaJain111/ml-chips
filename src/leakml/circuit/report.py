@@ -48,13 +48,18 @@ def circuit_results_table(
     by_ones = metrics.results_table(df, ["n_ones"], "i_vdd_ml", "i_vdd_spice", i_floor, False)
     for _, r in by_ones.sort_values("n_ones").iterrows():
         rows.append({"scope": f"  ones = {int(r['n_ones'])}", **r.drop("n_ones").to_dict()})
+    if "i_vdd_ml_gates" in df.columns:
+        # Ablation: the plain sum of isolated-gate leakages, without the loading term (SPEC §6.3)
+        s = metrics.summarize(
+            df["i_vdd_ml_gates"].to_numpy(), df["i_vdd_spice"].to_numpy(), i_floor=i_floor
+        )
+        rows.append({"scope": "no loading term (sum of gate i_vdd)", **s})
     if {"i_in_ml", "i_in_spice"} <= set(df.columns) and np.isfinite(df["i_in_ml"]).all():
-        # DIAGNOSTIC ONLY (uses SPICE input currents, not a prediction): add back the gate-input
-        # current that downstream gates draw through their drivers from VDD (the loading the
-        # hierarchical model ignores).
-        corrected = df["i_vdd_ml"] + (df["i_in_ml"] - df["i_in_spice"])
-        s = metrics.summarize(corrected.to_numpy(), df["i_vdd_spice"].to_numpy(), i_floor=i_floor)
-        rows.append({"scope": "loading-corrected (diagnostic only)", **s})
+        # secondary metric: current delivered by the primary-input sources
+        s = metrics.summarize(
+            df["i_in_ml"].to_numpy(), df["i_in_spice"].to_numpy(), i_floor=i_floor
+        )
+        rows.append({"scope": "primary-input current i_in", **s})
     if gate_results is not None and len(gate_results):
         # SPEC §5.4 names are i_vdd_*; accept the shorter i_spice / i_ml too
         ml_c = "i_vdd_ml" if "i_vdd_ml" in gate_results else "i_ml"

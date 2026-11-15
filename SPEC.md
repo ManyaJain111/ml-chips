@@ -104,8 +104,22 @@ rail (NMOS: 0, PMOS: vdd, i.e. at its body) and the drain up to the other rail; 
 see a small source offset. Uniform vd, vs put fewer than 1 % of rows near that point. In
 `nmos_off` and `pmos_off`, a random 40 % of rows (`sampling.SOURCE_PIN_FRAC`) instead get
 `vs` = rail ± offset, offset log-uniform in [1e-9, 1e-1] V (`SOURCE_PIN_RANGE`), towards the inside
-of [0, vdd], rounded to the deck's 10 significant digits; `vd` stays uniform. Drawn after all
-others, so the other rows and the ON cases are unchanged.
+of [0, vdd], rounded to the deck's 10 significant digits. Drawn after all others, so the other
+rows and the ON cases are unchanged.
+
+**Drain pinning (OFF cases only).** The OFF FET that sets a gate's leakage also has its drain on
+the other rail (|vds| ≈ VDD). With only the source pinned, ~4 % of OFF rows were there, and they
+had the largest validation error. An independent 50 % of OFF rows (`sampling.DRAIN_PIN_FRAC`) get
+`vd` = other rail ∓ offset (same offset law), so ~20 % of OFF rows sit at the full-VDD point.
+Drawn last.
+
+**Stack pinning (ON cases only).** An ON FET in series with an OFF one (NAND2 `10`: MNA, NOR2
+`10`: MPB) has its drain on the far rail and its source on the floating stack node, where it is
+only weakly on. Uniform vd, vs put < 1 % of ON rows there (validation id median ≈ 10 %, p95 ≈
+50 %). Of the ON rows outside the low-|Vds| set, a random 25 % (`sampling.STACK_PIN_FRAC`) get
+`vd` = far rail ∓ offset (same offset law as source pinning) and `vs` at a distance
+U(0.03, 0.5)·vdd from the far rail (`STACK_VS_BAND`), i.e. ~15 % of ON rows. Drawn right after
+the low-|Vds| override.
 
 **Boundary oversampling (all cases).** Tree models are least accurate near the edges of the sampled
 box (on the 10k data, OFF-case validation p95 ≈ 58 % for rows within 5 % of an edge vs ≈ 45 %
@@ -171,7 +185,9 @@ n rows. The failure count is logged.
 ### 4.5 Models (Deliverables 4, 5)
 * Split: shuffle with `seeds.split`, 70/15/15 (or 80/10/10). The indices are saved to `artifacts/splits/`.
 * **Four model types**, compared on **validation**, defaults in `ml/zoo.py`: polynomial ridge,
-  random forest, gradient-boosted trees (LightGBM), MLP.
+  random forest, gradient-boosted trees (LightGBM), MLP. The LightGBM trees use linear leaves
+  (`linear_tree`): log-current is close to linear in the physics features, and constant leaves
+  left a few-% staircase error (validation median OFF `id` 4.3 % → 1.1 %, ON `ig` 7.4 % → 2.5 %).
 * Targets: currents span ~10 decades and change sign, so regress in a transformed space
   (`log10|I|` + sign, or `asinh(I/I0)`). Features may include physics-derived terms (`vds`,
   `vgs`, `1/T`, `vgs/vT`, normalised process params). The fitted feature list and transform are
@@ -286,11 +302,23 @@ Inter-gate loading is physically present here.
 ### 6.3 Hierarchical ML
 For each vector: logic-simulate ; (gate type, input bits) per instance ; `GateLeakageModel.predict(gate,
 bits, corner_id)` (the Part B ML result for that gate/inputs/corner) ; sum. Inputs are assumed
-exactly 0/VDD and loading is ignored, so expect a lower accuracy than at gate level.
+exactly 0/VDD.
+
+**Loading term.** In Part B a gate's logic-1 inputs draw their gate-tunnelling current (`i_in_ml`)
+from ideal sources, so it is not in that gate's `i_vdd_ml`. In the circuit a high internal net is
+held up by its driver's pull-up, so this current comes from VDD (a low net sinks into the
+driver's pull-down and adds nothing). The prediction is therefore
+`i_vdd_ml = Σ i_vdd_ml(gate) + Σ f_int · i_in_ml(gate)`, with `f_int` the share of the gate's
+high pins driven by another gate (primary-input pins are fed by the testbench, as in SPICE;
+`i_in_ml` is split evenly over the high pins). Only Part B ML outputs are used, never SPICE.
+On the 32 nm LP card `i_in` is ~50 % of a gate's `i_vdd`, so without this term the circuit is
+underestimated by ~30 %.
 
 ### 6.4 Circuit result schema
 `circuit_spice.csv`: `circuit, vector, corner_id, vdd, temp, i_vdd_spice, i_in_spice, logic_ok`.
-`circuit_ml.csv`: `circuit, vector, corner_id, i_vdd_ml, i_in_ml, n_<gate>_<bits>…`.
+`circuit_ml.csv`: `circuit, vector, corner_id, i_vdd_ml, i_vdd_ml_gates, i_load_ml, i_in_ml,
+n_<gate>_<bits>…` (`i_vdd_ml` = gates + loading, `i_vdd_ml_gates` = plain sum, `i_load_ml` = loading
+term, `i_in_ml` = primary-input share, comparable with `i_in_spice`).
 `circuit_results.csv`: 1:1 join on `(circuit, vector, corner_id)`.
 
 ## 7. Metrics (`leakml/metrics.py`)
@@ -342,10 +370,11 @@ strings `"01"` / `"0010110"` into integers.
 |---|---|---|---|---|
 | env check | 00 | P4 | 1 | s |
 | nominals | 01 | P1 | – | s |
-| transistor data | 02 | P1 | 40,000 | ~5 min |
+| transistor data | 02 | P1 | 120,000 | ~15 min |
 | data check | 03 | P1 | – | s |
 | train + compare | 04 | P2 | – | min–tens of min |
 | finalize | 05 | P2 | – | s |
+| learning curve | 05b | P1 | – | min (refits the chosen models on nested subsets) |
 | corners | 06 | P3 | – | s |
 | gate SPICE | 07 | P3 | 3,600 | ~1 min |
 | gate ML | 08 | P3 | – | s |

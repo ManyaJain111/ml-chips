@@ -19,7 +19,7 @@ QUICK  ?=
 QFLAG   = $(if $(QUICK),--quick,)
 ARGS    = --config $(CONFIG) $(QFLAG)
 
-.PHONY: setup check nominals data datacheck train finalize corners gates-spice gates-ml \
+.PHONY: setup check nominals data datacheck train finalize learncurve corners gates-spice gates-ml \
         gates-report circuit-spice circuit-ml circuit-report partA partB partC all baseline bootstrap \
         test lint fmt
 
@@ -33,6 +33,7 @@ data:           ; $(RUN) scripts/02_generate_transistor_data.py $(ARGS)
 datacheck:      ; $(RUN) scripts/03_data_check.py $(ARGS)
 train:          ; $(RUN) scripts/04_train_compare.py $(ARGS)
 finalize:       ; $(RUN) scripts/05_finalize_models.py $(ARGS)
+learncurve:     ; $(RUN) scripts/05b_learning_curve.py $(ARGS)
 
 # ---------------------------------------------------------------- Part B (P3)
 corners:        ; $(RUN) scripts/06_generate_corners.py $(ARGS)
@@ -45,7 +46,7 @@ circuit-spice:  ; $(RUN) scripts/10_circuit_spice.py $(ARGS)
 circuit-ml:     ; $(RUN) scripts/11_circuit_ml.py $(ARGS)
 circuit-report: ; $(RUN) scripts/12_circuit_report.py $(ARGS)
 
-partA: check nominals data datacheck train finalize
+partA: check nominals data datacheck train finalize learncurve
 partB: corners gates-spice gates-ml gates-report
 partC: circuit-spice circuit-ml circuit-report
 all:   partA partB partC

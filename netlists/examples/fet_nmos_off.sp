@@ -58,7 +58,7 @@
 +dwj     = 0               xgw     = 0               xgl     = 0
 +rshg    = 0.4             gbmin   = 1e-010          rbpb    = 5               rbpd    = 15
 +rbps    = 15              rbdb    = 15              rbsb    = 15              ngcon   = 1
-Vd d 0 dc 0.7762377438
+Vd d 0 dc 0.8975028142
 Vg g 0 dc 0
 Vs s 0 dc 0.8521797987
 Vb b 0 dc 0
