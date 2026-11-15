@@ -98,12 +98,12 @@ the table.
 
 \paragraph{Linear leaves in the GBDT.}
 With constant leaves a boosted ensemble approximates the smooth log-current surface by a fine
-staircase, which leaves a floor of a few per cent in the median error even with a thousand
-trees. LightGBM's linear trees fit a small ridge-regularised linear model in every leaf instead.
+staircase, which leaves a floor of a few per cent in the median error even with many trees.
+LightGBM's linear trees fit a small ridge-regularised linear model in every leaf instead.
 Since the log-current is close to linear in the physics features, each leaf then follows the
 local slope and the staircase disappears.
-% "roughly halves in every case" is read from tab_linear_leaves; re-check after the final run. Table~\ref{tab:linear} compares the last run with
-constant leaves (commit \ConstLeafCommit, identical data, grid and selection) with the final
+% "roughly halves in every case" is read from tab_linear_leaves; re-check after the final run.
+Table~\ref{tab:linear} compares the last run with constant leaves (commit \ConstLeafCommit, identical data, grid and selection) with the final
 linear-leaf models: the validation median error roughly halves in every case, for example
 \ConstLeafValMedianErrNmosOff{} $\to$ \ValMedianErrNmosOff{} for \texttt{nmos\_off} and
 \ConstLeafValMedianErrNmosOn{} $\to$ \ValMedianErrNmosOn{} for \texttt{nmos\_on}. The p95 error
