@@ -1,25 +1,25 @@
 * pmos_off sample 0
 .options gmin=1e-18 abstol=1e-18 reltol=1e-6 vntol=1e-9
-.temp 18.13081279
+.temp -1.530638943
 .model  pmos  pmos  level = 54
 +version = 4.0             binunit = 1               paramchk= 1               mobmod  = 0
 +capmod  = 2               igcmod  = 1               igbmod  = 1               geomod  = 1
 +diomod  = 1               rdsmod  = 0               rbodymod= 1               rgatemod= 0
 +permod  = 1               acnqsmod= 0               trnqsmod= 0
-+tnom    = 27              toxe    = 1.513797525e-09       toxp    = 1.3e-009        toxm    = 1.62e-009
++tnom    = 27              toxe    = 1.768802845e-09       toxp    = 1.3e-009        toxm    = 1.62e-009
 +dtox    = 3.2e-010        epsrox  = 3.9             wint    = 5e-009          lint    = 0
 +ll      = 0               wl      = 0               lln     = 1               wln     = 1
 +lw      = 0               ww      = 0               lwn     = 1               wwn     = 1
 +lwl     = 0               wwl     = 0               xpart   = 0               toxref  = 1.6e-009
-+vth0    = -0.580967912         k1      = 0.4             k2      = -0.01           k3      = 0
++vth0    = -0.6371504283         k1      = 0.4             k2      = -0.01           k3      = 0
 +k3b     = 0               w0      = 2.5e-006        dvt0    = 1               dvt1    = 2
 +dvt2    = -0.032          dvt0w   = 0               dvt1w   = 0               dvt2w   = 0
 +dsub    = 0.1             minv    = 0.05            voffl   = 0               dvtp0   = 1e-011
-+dvtp1   = 0.05            lpe0    = 0               lpeb    = 0               xj      = 9.97698352e-09
-+ngate   = 1e+023          ndep    = 3.034300864e+18       nsd     = 2e+020          phin    = 0
++dvtp1   = 0.05            lpe0    = 0               lpeb    = 0               xj      = 9.586033589e-09
++ngate   = 1e+023          ndep    = 3.21385067e+18       nsd     = 2e+020          phin    = 0
 +cdsc    = 0               cdscb   = 0               cdscd   = 0               cit     = 0
 +voff    = -0.1            nfactor = 1.8             eta0    = 0.0115          etab    = 0
-+vfb     = 0.55            u0      = 0.01534845221           ua      = 2e-009          ub      = 5e-019
++vfb     = 0.55            u0      = 0.01450245977           ua      = 2e-009          ub      = 5e-019
 +uc      = 0               vsat    = 135000          a0      = 1               ags     = 1e-020
 +a1      = 0               a2      = 1               b0      = 0               b1      = 0
 +keta    = -0.047          dwg     = 0               dwb     = 0               pclm    = 0.12
@@ -58,11 +58,11 @@
 +dwj     = 0               xgw     = 0               xgl     = 0
 +rshg    = 0.4             gbmin   = 1e-010          rbpb    = 5               rbpd    = 15
 +rbps    = 15              rbdb    = 15              rbsb    = 15              ngcon   = 1
-Vd d 0 dc 0.4001184292
-Vg g 0 dc 0.8545400635
-Vs s 0 dc 0.8544817735
-Vb b 0 dc 0.8545400635
-M1 d g s b pmos W=3.893969504e-08 L=3.2e-08
+Vd d 0 dc 1.395471936e-06
+Vg g 0 dc 0.9841241529
+Vs s 0 dc 0.4483243024
+Vb b 0 dc 0.9841241529
+M1 d g s b pmos W=3.338070993e-08 L=3.2e-08
 .control
 set numdgt=12
 op

@@ -46,6 +46,11 @@ _DEFAULTS: dict[str, dict[str, Any]] = {
         "subsample": 0.8,
         "subsample_freq": 1,
         "colsample_bytree": 0.8,
+        # piecewise-LINEAR leaves: log-current is close to linear in the physics features, and
+        # flat leaves left a few-% staircase error (val median OFF id 4.3 % -> 1.7 %, ON ig
+        # 7.4 % -> 2.6 % on the 30k data)
+        "linear_tree": True,
+        "linear_lambda": 1e-3,
         "n_jobs": -1,
     },
     "mlp": {

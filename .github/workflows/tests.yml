@@ -1,0 +1,36 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+concurrency:  # a new push cancels the previous run on the same branch
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ngspice  # real-simulator tests skip without it
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q ngspice
+          ngspice --version | head -2
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install dependencies (Python from .python-version, locked deps)
+        run: uv sync --locked
+
+      - name: Lint
+        run: make lint
+
+      - name: Tests
+        run: make test

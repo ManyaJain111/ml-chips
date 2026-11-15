@@ -8,7 +8,7 @@ Outputs: results/tables/learning_curve.{csv,md}
          results/plots/learning_curve.{png,pdf}
 
     uv run python scripts/05b_learning_curve.py
-    uv run python scripts/05b_learning_curve.py --sizes 500 1000 2000 3500 5000 7000
+    uv run python scripts/05b_learning_curve.py --sizes 1000 3500 7000 14000 21000
 """
 
 from __future__ import annotations
@@ -33,7 +33,10 @@ def parse_args(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--config", default=DEFAULT_CONFIG)
     p.add_argument("--quick", action="store_true", help="pilot run with small sample counts")
-    p.add_argument("--sizes", type=int, nargs="+", default=[500, 1000, 2000, 3500, 5000, 7000])
+    # sizes above the training split are capped at it, so the last point is the full split
+    p.add_argument(
+        "--sizes", type=int, nargs="+", default=[500, 1000, 2000, 3500, 7000, 14000, 21000]
+    )
     p.add_argument("--replot", action="store_true", help="only redraw the plots from the table")
     return p.parse_args(argv)
 

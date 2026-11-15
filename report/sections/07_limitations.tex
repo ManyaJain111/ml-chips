@@ -1,0 +1,33 @@
+% Limitations
+\section{Limitations and improvements}\label{sec:limitations}
+
+We reach \GateMeanAcc{} at gate level (\FreshMeanAcc{} on fresh corners) and \CircuitMeanAcc{} on
+the test circuit, against a target of up to \qty{99}{\percent}. The composition is exact (oracle
+\OracleMeanAcc, circuit from SPICE gate values \CompSpiceMeanAcc), so the remaining gap is entirely
+transistor-model error. The limitations we see, and what we would do next:
+\begin{itemize}
+  \item \textbf{Stacked OFF PMOS and PMOS gate tunnelling} are the two largest gate-level error
+        sources (\ErrorSourceFirst, \ErrorSourceSecond). Next: oversample OFF PMOS with the
+        drain on an intermediate stack node, and build the physical $\exp(-\alpha\,t_{ox})$
+        dependence into a dedicated $I_G$ model.
+  \item \textbf{SPICE node voltages are still required.} As the brief prescribes, the gate
+        prediction reads internal node voltages from SPICE, so it is not yet SPICE-free. Next:
+        solve KCL at the internal nodes with the ML currents and compare with SPICE.
+  \item \textbf{The \KclVdsMax{} KCL threshold is a heuristic.} It works because of a wide gap
+        (in-gate ON values at most \OnVdsMax, biased ON transistors from \OnBiasedVdsMin), but an
+        intermediate case would fall between regimes. A node-voltage solve would remove it.
+  \item \textbf{Ideal gate voltages.} The models only know $V_G\in\{0,V_{DD}\}$; with degraded
+        logic levels the snap would no longer be negligible. Next: sample $V_G$ near each rail.
+  \item \textbf{Tiny currents.} Zero-crossing ON currents and OFF $I_S$ near \IFloor{} have large
+        relative errors, and below about $10^{-14}$\,A even SPICE is only good to a per cent or
+        two. Next: train on the supply-side currents with a loss weighted by their share of the
+        gate leakage.
+  \item \textbf{Junction areas.} The decks give no \texttt{AS}/\texttt{AD}, so junction leakage
+        sits on a $W$-independent floor. Next: set junction areas from $W$ in every deck.
+  \item \textbf{Loading term} assumes ideal input levels and splits $I_{in}$ evenly over a gate's
+        high pins: exact for this NAND2-only circuit, an approximation for gates with asymmetric
+        inputs. Next: predict $I_{in}$ per pin.
+  \item \textbf{Data size and grid edge.} The learning curve still falls at \LCMaxSize{} rows, and
+        all chosen GBDTs use the largest leaf count in the grid; more data and a larger grid may
+        still help.
+\end{itemize}

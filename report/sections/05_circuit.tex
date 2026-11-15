@@ -1,0 +1,71 @@
+% Test circuit
+\section{Test-circuit results}\label{sec:circuit}
+
+\subsection{Circuit and SPICE reference}
+The \TestCircuit{} computes the XOR of \CircuitNumInputs{} inputs with a balanced tree of
+\CircuitNumXor{} XOR2 gates. Since only the Part~B gates have leakage models, each XOR2 is built
+from four NAND2 ($n_1=\overline{ab}$, $n_2=\overline{a n_1}$, $n_3=\overline{b n_1}$,
+$\mathit{out}=\overline{n_2 n_3}$), giving \CircuitGateMix{} gates. All \CircuitNumVectors{}
+vectors are evaluated at the same \NumCorners{} corners as the gates (\CircuitNumSims{} cases). The
+SPICE reference is one flat transistor-level deck per (vector, corner), with the same subcircuits,
+sizing and corners; internal nets are driven by real gates, so loading is physically present. The
+output is correct in \CircuitLogicOk{} decks.
+
+\subsection{Hierarchical ML prediction and the loading term}
+A logic simulation gives every gate instance its input bits; each instance's leakage is the
+Part~B ML result for that gate, input combination and corner. No SPICE quantity of the circuit is
+used.
+
+The plain gate sum under-estimated the circuit by \CircuitNoLoadBias{} (median, mean accuracy
+\CircuitNoLoadMeanAcc), far more than the gate errors could explain. The missing current is
+physical: in Part~B a gate's inputs are ideal sources, so the tunnelling current drawn by a high
+input ($I_{in}$) is not in that gate's $I_{VDD}$. In the circuit, a high internal net is held up
+by the ON PMOS of its driver, so the same current is drawn from VDD (a low net sinks into the
+driver's pull-down and adds nothing). We therefore add a loading term:
+\begin{equation}
+  I_{VDD}^{ML} = \sum_{\text{gates}} I_{VDD}^{ML}(\text{gate},\text{bits})
+  + \sum_{\text{gates}} f_{\text{int}}\, I_{in}^{ML}(\text{gate},\text{bits}),
+\end{equation}
+where $f_{\text{int}}$ is the share of the gate's high input pins driven by another gate (pins fed
+by primary inputs draw from the testbench sources, as in the SPICE deck). On this low-power card
+the term is large: it is \CircuitLoadShare{} of the predicted circuit leakage (median).
+
+To separate the composition from the ML error, we also composed the circuit from the Part~B
+\emph{SPICE} gate values with the same loading term. This reproduces the circuit SPICE leakage with
+mean accuracy \CompSpiceMeanAcc{} (max error \CompSpiceMaxErr), so the hierarchical composition and
+the loading term are essentially exact for this circuit, and the circuit error is inherited
+entirely from the gate-level ML error.
+
+\subsection{Results (D8)}
+Over all \CircuitNumSims{} cases the mean accuracy is \CircuitMeanAcc: median error
+\CircuitMedianErr, p95 \CircuitPninetyfiveErr, maximum \CircuitMaxErr, bias \CircuitBias{}
+(Table~\ref{tab:circuit}, Figure~\ref{fig:circuitparity}). Grouped by the number of ones in the
+vector, the accuracy stays between \CircuitOnesAccMin{} and \CircuitOnesAccMax.
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{Test-circuit results (D8): all vectors, then by number of ones. Below the rule: without
+  the loading term, the primary-input current, and the gate-level result for comparison.}
+  \label{tab:circuit}
+  \fittable{\input{generated/tab_circuit}}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.6\linewidth]{circuit_parity.pdf}
+  \caption{Circuit parity plot (D8), all \CircuitNumSims{} cases, coloured by temperature. The
+  error depends only weakly on the corner (Section~\ref{sec:errcircuit}).}
+  \label{fig:circuitparity}
+\end{figure}
+
+\paragraph{Circuit versus gate accuracy.}
+The brief expects the circuit to be less accurate than the gates. With the loading term it is
+slightly \emph{more} accurate: \CircuitMeanAcc{} against \GateNandMeanAcc{} over the NAND2 cases
+(its only gate type), with much smaller tails (p95 \CircuitPninetyfiveErr{} vs
+\GateNandPninetyfiveErr, max \CircuitMaxErr{} vs \GateNandMaxErr). The circuit leakage is a sum
+over \CircuitNumGates{} instances in different input states, so the instance-to-instance part of
+the gate error partly cancels. The cancellation is incomplete because all instances share one
+corner, and a systematic bias does not cancel at all: the circuit bias (\CircuitBias) follows the
+bias of the loading term ($I_{in}$: \GateIinBias), not the NAND2 bias (\GateNandBias). The circuit accuracy is therefore limited by the
+systematic part of the transistor-model error, not by its scatter.

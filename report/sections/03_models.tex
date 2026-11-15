@@ -1,0 +1,116 @@
+% Transistor models (builds on the draft by Joanna, P2)
+\section{Transistor models}\label{sec:models}
+
+For each case one model predicts all four terminal currents from the raw inputs. The feature code
+and target transform are saved inside the model, so the gate and circuit stages call it on raw
+voltages and get amperes back.
+
+\subsection{Features and targets}
+Within a case $V_G$ and $V_B$ are fixed, so the information is in the voltage differences. We
+build \NumFeatures{} features: $V_{DD}$, $T$, $1/T$ and $v_T=kT/q$; $W$ and $\ln W$; $V_{GS}$,
+$V_{DS}$, $V_{BS}$, $V_{GD}$, $V_{BD}$, $|V_{DS}|$; the subthreshold terms $V_{GS}/v_T$,
+$V_{DS}/v_T$, $(V_{GS}-|V_{th0}|)/v_T$ and $1-e^{-|V_{DS}|/v_T}$; and the five process parameters
+normalised by their nominal values, plus $1/t_{ox}$. These put the dominant exponentials into a
+form in which log-current is close to linear. For PMOS all differences are negated, so ``larger
+$V_{GS}$'' always means ``more on''.
+
+The currents span more than ten decades and $I_D$, $I_S$ change sign with $V_D-V_S$, so we predict
+\begin{equation}
+  z_t = \operatorname{asinh}(I_t / i_{0,t}), \qquad t\in\{D,G,S,B\},
+\end{equation}
+with $i_{0,t}$ the \AsinhQuantile{} quantile of $|I_t|$ on the training rows. For $|I|\gg i_0$ an
+error $\delta z$ is a relative current error of about $\delta z$, which is what we are graded on,
+and unlike $\log|I|$ the transform is smooth through zero and keeps the sign. Two further choices
+were selected on validation data:
+\begin{itemize}
+  \item \textbf{Channel shaping (ON cases).} $I_D$, $I_S$ are divided by
+        $\tanh\!\bigl((V_D-V_S)/2v_T\bigr)$ before the transform, so the model learns a one-signed
+        quantity instead of a sign flip at $V_{DS}=0$. It hurt the OFF cases, where junction
+        leakage dominates near $V_D=V_S$, so it is off there.
+  \item \textbf{$I_S$ from Kirchhoff's law.} $I_D$ and $I_B$ are predicted far better than $I_S$,
+        so we can set $I_S=-(I_D+I_G+I_B)$, which also makes every prediction satisfy KCL
+        exactly, a property the gate composition relies on. It won in \KclCases, lowering the
+        validation p95 (mean over currents) from \KclDirectPninetyfiveNmosOff{} to
+        \KclDerivedPninetyfiveNmosOff{} for \texttt{nmos\_off} and from
+        \KclDirectPninetyfivePmosOff{} to \KclDerivedPninetyfivePmosOff{} for \texttt{pmos\_off}.
+\end{itemize}
+
+\subsection{Model types, selection and the linear-leaf GBDT}
+We compare polynomial ridge (baseline), random forest, gradient-boosted trees (LightGBM, one
+regressor per current) and an MLP, each with a \GridPoints-point grid (Table~\ref{tab:hyper}).
+Errors are relative, $e=(I_{ML}-I_{SPICE})/|I_{SPICE}|$; we report median and p95 of $|e|$, mean
+accuracy $100(1-\overline{|e|})$ and $R^2$ on $\log_{10}|I|$, excluding rows below \IFloor{}
+(numerical noise that contributes nothing to gate leakage; this removes all OFF-state $I_G$). We
+select on the validation \emph{p95}, not the median, because a gate's leakage sums several
+transistors and the tail of the transistor error is what limits gate accuracy.
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{Model types, fixed settings and validation grids.}
+  \label{tab:hyper}
+  \fittable{\input{generated/tab_hyper}}
+\end{table}
+
+The largest single improvement in the project came from one GBDT setting. With constant leaves,
+the ensemble approximates the smooth log-current surface by a staircase, which left a floor of a
+few per cent in the median error. LightGBM's linear trees fit a small ridge model in each leaf;
+since log-current is nearly linear in our physics features, the staircase disappears.
+Table~\ref{tab:linear} compares the last constant-leaf run (\ConstLeafCommit) with the first
+linear-leaf run (\LinLeafCommit; same data, grid and selection): the validation median error
+roughly halves in every case, and the gate-level accuracy rises from \ConstLeafGateMeanAcc{} to
+\LinLeafGateMeanAcc{} with no other change to the gate code.
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{Constant vs.\ linear leaves: validation errors of the chosen GBDT (mean over currents)
+  and gate-level mean accuracy.}
+  \label{tab:linear}
+  \fittable{\input{generated/tab_linear_leaves}}
+\end{table}
+
+\subsection{Results (D4, D5)}
+Table~\ref{tab:models} compares the model types on validation data; per-current values are in
+Table~\ref{tab:modelsfull}. The selected model is \ChosenSummary{} (\ChosenHyperNmosOff{}).
+Table~\ref{tab:chosen} reports these models on the untouched test set, and
+Figure~\ref{fig:predvsspice} shows predicted against SPICE currents.
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{Model comparison on the \emph{validation} set (D4), best grid point per type, mean over
+  currents with a relative error. Bold: selected (lowest p95).}
+  \label{tab:models}
+  \fittable{\input{generated/tab_models}}
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{Chosen models on the \emph{test} set (D5), \NTest{} rows per case. Bias: median signed
+  error; Excl.: rows below \IFloor.}
+  \label{tab:chosen}
+  \fittable{\input{generated/tab_chosen}}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.48\linewidth]{pred_vs_spice_nmos_on.pdf}\hfill
+  \includegraphics[width=0.48\linewidth]{pred_vs_spice_nmos_off.pdf}\\[2mm]
+  \includegraphics[width=0.48\linewidth]{pred_vs_spice_pmos_on.pdf}\hfill
+  \includegraphics[width=0.48\linewidth]{pred_vs_spice_pmos_off.pdf}
+  \caption{Predicted vs.\ SPICE currents on the test set (D5): \texttt{nmos\_on},
+  \texttt{nmos\_off} (top), \texttt{pmos\_on}, \texttt{pmos\_off} (bottom). Scatter appears only at
+  the smallest currents (OFF $I_S$ near the floor, ON $I_D$/$I_S$ at the zero crossing).}
+  \label{fig:predvsspice}
+\end{figure}
+
+GBDT wins every case by a wide margin. Polynomial ridge cannot follow a log-current that switches
+between subthreshold and above-threshold behaviour; the random forest keeps the constant-leaf
+staircase without boosting; the MLP is competitive in the smooth OFF cases but fits the narrow,
+densely oversampled regions (low $|V_{DS}|$, pinned rails) worse than trees, which split on exactly
+those coordinates. The OFF models are the most accurate, and $I_B$ is the easiest current
+everywhere. The largest errors are the ON-state $I_D$/$I_S$ tails, which come almost entirely from
+rows near $V_D=V_S$. Inside a gate these currents are not used directly: Section~\ref{sec:kcl}
+explains why, and why the ON currents that do matter ($I_G$, $I_B$) are the accurate ones.
