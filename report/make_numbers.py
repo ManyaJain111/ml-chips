@@ -30,9 +30,9 @@ import pandas as pd
 import yaml
 
 from leakml import io, sampling
+from leakml.constants import Case
 from leakml.metrics import summarize
 from leakml.ml import zoo
-from leakml.constants import Case
 from leakml.ml.features import TargetTransform, build_features
 from leakml.ml.train import SHAPED_CASES, TARGET_KIND
 
@@ -701,8 +701,12 @@ define("LowVdsFrac", lambda: pct(100 * sampling.LOW_VDS_FRAC, 0), "sampling.LOW_
 define("LowVdsMin", lambda: rf"\qty{{{sampling.LOW_VDS_RANGE[0]:.0e}}}{{\volt}}", "LOW_VDS_RANGE")
 define("LowVdsMax", lambda: rf"\qty{{{sampling.LOW_VDS_RANGE[1]:.0e}}}{{\volt}}", "LOW_VDS_RANGE")
 define("SourcePinFrac", lambda: pct(100 * sampling.SOURCE_PIN_FRAC, 0), "SOURCE_PIN_FRAC")
-define("PinMin", lambda: rf"\qty{{{sampling.SOURCE_PIN_RANGE[0]:.0e}}}{{\volt}}", "SOURCE_PIN_RANGE")
-define("PinMax", lambda: rf"\qty{{{sampling.SOURCE_PIN_RANGE[1]:.0e}}}{{\volt}}", "SOURCE_PIN_RANGE")
+define(
+    "PinMin", lambda: rf"\qty{{{sampling.SOURCE_PIN_RANGE[0]:.0e}}}{{\volt}}", "SOURCE_PIN_RANGE"
+)
+define(
+    "PinMax", lambda: rf"\qty{{{sampling.SOURCE_PIN_RANGE[1]:.0e}}}{{\volt}}", "SOURCE_PIN_RANGE"
+)
 define("DrainPinFrac", lambda: pct(100 * sampling.DRAIN_PIN_FRAC, 0), "DRAIN_PIN_FRAC")
 define("BothPinFrac", lambda: pct(100 * sampling.DRAIN_PIN_FRAC * sampling.SOURCE_PIN_FRAC, 0),
        "DRAIN_PIN_FRAC * SOURCE_PIN_FRAC")  # fmt: skip
@@ -863,8 +867,10 @@ except Exception as e:  # noqa: BLE001
 
 define("ConstLeafCommit", tt(CONST_LEAF_COMMIT), "constant-leaf commit")
 for c in CASES:
-    for col, nm, d in (("val_median_err_pct", "ValMedianErr", 1), ("val_p95_err_pct",
-                                                                    "ValPninetyfiveErr", 1)):
+    for col, nm, d in (
+        ("val_median_err_pct", "ValMedianErr", 1),
+        ("val_p95_err_pct", "ValPninetyfiveErr", 1),
+    ):
         define(f"ConstLeaf{nm}{camel(c)}",
                lambda c=c, col=col, d=d: pct(one(need(const_chosen, "case", col),
                                                  const_chosen["case"] == c)[col], d),
@@ -876,7 +882,9 @@ define("ConstLeafGateMeanAcc",
 
 
 def _linear_table() -> str:
-    a = need(const_chosen, "case", "model", "val_median_err_pct", "val_p95_err_pct").set_index("case")
+    a = need(const_chosen, "case", "model", "val_median_err_pct", "val_p95_err_pct").set_index(
+        "case"
+    )
     b = need(chosen, "case", "model", "val_median_err_pct", "val_p95_err_pct").set_index("case")
     rows = [[tt(c), pct(a.loc[c, "val_median_err_pct"], 2), pct(b.loc[c, "val_median_err_pct"], 2),
              pct(a.loc[c, "val_p95_err_pct"], 1), pct(b.loc[c, "val_p95_err_pct"], 1)]
@@ -912,7 +920,7 @@ def _netlist_excerpt() -> str:
             toks = ln[1:].split()
             pairs, i = [], 0
             while i + 2 < len(toks) + 1 and i < len(toks):
-                if i + 2 < len(toks) + 1 and toks[i + 1:i + 2] == ["="]:
+                if i + 2 < len(toks) + 1 and toks[i + 1 : i + 2] == ["="]:
                     pairs.append((toks[i], toks[i + 2]))
                     i += 3
                 elif "=" in toks[i]:
