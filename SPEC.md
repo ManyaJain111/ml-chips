@@ -113,6 +113,14 @@ had the largest validation error. An independent 50 % of OFF rows (`sampling.DRA
 `vd` = other rail ∓ offset (same offset law), so ~20 % of OFF rows sit at the full-VDD point.
 Drawn last.
 
+**Stack pinning (ON cases only).** An ON FET in series with an OFF one (NAND2 `10`: MNA, NOR2
+`10`: MPB) has its drain on the far rail and its source on the floating stack node, where it is
+only weakly on. Uniform vd, vs put < 1 % of ON rows there (validation id median ≈ 10 %, p95 ≈
+50 %). Of the ON rows outside the low-|Vds| set, a random 25 % (`sampling.STACK_PIN_FRAC`) get
+`vd` = far rail ∓ offset (same offset law as source pinning) and `vs` at a distance
+U(0.03, 0.5)·vdd from the far rail (`STACK_VS_BAND`), i.e. ~15 % of ON rows. Drawn right after
+the low-|Vds| override.
+
 **Boundary oversampling (all cases).** Tree models are least accurate near the edges of the sampled
 box (on the 10k data, OFF-case validation p95 ≈ 58 % for rows within 5 % of an edge vs ≈ 45 %
 inside), and the corners reach those edges too. A random 30 % of rows (`sampling.BOUNDARY_FRAC`)

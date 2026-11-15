@@ -43,6 +43,16 @@ SOURCE_PIN_RANGE = (1e-9, 1e-1)  # volts
 # so ~DRAIN_PIN_FRAC * SOURCE_PIN_FRAC of rows sit at the full-VDD operating point. Drawn last.
 DRAIN_PIN_FRAC = 0.5
 
+# Stack pinning for the ON cases (SPEC §4.1). An ON FET in series with an OFF one (NAND2 "10":
+# MNA, NOR2 "10": MPB) has its drain on the far rail (NMOS: vdd, PMOS: 0) and its source on the
+# floating stack node, which settles where the ON FET is only weakly on (NMOS: high, PMOS: low).
+# Uniform vd, vs put <1 % of ON rows there, and those had ~10 % median / ~50 % p95 validation error
+# on id. A fraction STACK_PIN_FRAC of the ON rows NOT already in the low-|Vds| set get vd = far rail
+# ∓ offset (offset log-uniform in SOURCE_PIN_RANGE) and vs uniform in the STACK_VS_BAND of the
+# supply, measured from the device's own rail (NMOS: vs/vdd in 1 - band, PMOS: vs/vdd in band).
+STACK_PIN_FRAC = 0.25
+STACK_VS_BAND = (0.03, 0.5)  # fraction of vdd away from the FAR rail (the drain's rail)
+
 # Boundary oversampling, all cases (SPEC §4.1). Tree models are least accurate near the edges of
 # the sampled box (fewer neighbours; on the 10k data the OFF-case validation p95 was ~58 % for rows
 # within 5 % of an edge vs ~45 % inside), and the 200 corners reach those edges too. A fraction
@@ -143,6 +153,25 @@ def _pin_drain(
     return vd
 
 
+def _pin_stack(
+    vd: np.ndarray, vs: np.ndarray, vdd: np.ndarray, device: str, rng: np.random.Generator
+) -> tuple[np.ndarray, np.ndarray]:
+    """ON cases: put STACK_PIN_FRAC of the non-low-|Vds| rows at the stacked operating point."""
+    n = len(vd)
+    pin = (rng.random(n) < STACK_PIN_FRAC) & (np.abs(vd - vs) > LOW_VDS_RANGE[1])
+    lo, hi = np.log10(SOURCE_PIN_RANGE[0]), np.log10(SOURCE_PIN_RANGE[1])
+    offset = 10.0 ** rng.uniform(lo, hi, n)
+    gap = rng.uniform(*STACK_VS_BAND, n) * vdd  # distance of the source from the drain's rail
+    if device == "nmos":
+        new_vd, new_vs = vdd - offset, vdd - gap
+    else:
+        new_vd, new_vs = offset, gap
+    vd, vs = vd.copy(), vs.copy()
+    vd[pin] = np.clip(_as_in_deck(new_vd[pin]), 0.0, vdd[pin])
+    vs[pin] = np.clip(_as_in_deck(new_vs[pin]), 0.0, vdd[pin])
+    return vd, vs
+
+
 def draw_transistor_samples(
     case: Case | str,
     n: int,
@@ -155,8 +184,8 @@ def draw_transistor_samples(
 
     Fixed draw order: vdd, vd, vs, w, temp, then the process params, with the boundary rows
     (BOUNDARY_*) pushed to the range edges from a child stream; ON cases then draw the
-    low-|Vds| override (LOW_VDS_*) and OFF cases the source pinning (SOURCE_PIN_*), so the rows
-    they do not touch are unaffected by them.
+    low-|Vds| override (LOW_VDS_*) then the stack pinning (STACK_*), and OFF cases the source and
+    drain pinning (SOURCE_PIN_*, DRAIN_PIN_*), so the rows they do not touch are unaffected.
     vg/vb follow CASE_BIAS using each row's own vdd. Returns `sample_id` + constants.INPUT_COLUMNS. Calling it again with the
     same rng continues the stream (used to top up failed simulations deterministically).
     """
@@ -186,6 +215,7 @@ def draw_transistor_samples(
         proc.loc[m, p] = nominal[p] * ratio
     if case in LOW_VDS_CASES:
         vd, vs = _low_vds_vd(vd, vs, vdd, rng)
+        vd, vs = _pin_stack(vd, vs, vdd, CASE_DEVICE[case], rng)
     if case in SOURCE_PIN_CASES:
         vs = _pin_source(vs, vdd, CASE_DEVICE[case], rng)
         vd = _pin_drain(vd, vdd, CASE_DEVICE[case], rng)
