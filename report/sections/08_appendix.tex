@@ -1,7 +1,97 @@
 % Appendix
 \section{Appendix}\label{sec:appendix}
 
-\todo{example netlists (D2), reproduction commands (D9), extra tables}
+\subsection{Example netlists}\label{sec:appnetlists}
+Table~\ref{tab:netlists} lists the example decks of Deliverable~2 in \texttt{netlists/examples/}:
+one single-transistor deck per case, one deck per gate and the test-circuit deck, each for the
+first sample or corner. Every deck contains the options line required by the brief and its full
+model card with the sampled process parameters. Figure~\ref{fig:netlistnand} shows the NAND2 deck
+with the model cards shortened; the single-transistor deck is in Figure~\ref{fig:netlist}.
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{Example netlists (Deliverable~2), \texttt{netlists/examples/}.}
+  \label{tab:netlists}
+  \fittable{\input{generated/tab_netlists}}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}{0.92\linewidth}
+    \small
+    \input{generated/netlist_gate_nand2}
+  \end{minipage}
+  \caption{Example gate deck (NAND2, inputs \texttt{00}, first corner;
+  \texttt{netlists/examples/gate\_NAND2.sp}). Of the two model cards only the overridden
+  \texttt{rgatemod} and the five sampled process parameters are shown. The internal node $x$ is
+  probed inside the subcircuit as \texttt{v(x1.x)}.}
+  \label{fig:netlistnand}
+\end{figure}
+
+\subsection{Reproducing the results}\label{sec:appreproduce}
+Everything in this report is regenerated from the model file by the commands below (Python
+\PythonVersion{}, dependencies pinned in \texttt{uv.lock}, simulator \SimVersion). All random draws
+use the fixed seeds of \texttt{configs/project.yaml} (transistor data \SeedTransistorData, split
+\SeedSplit, training \SeedTraining, corners \SeedCorners), so a rerun reproduces the same data,
+models and results.
+\begin{verbatim}
+uv sync                                 # install the pinned environment
+make check                              # ngspice, model file and versions
+make all                                # scripts 00 -> 12: data, models, gates, circuit
+uv run python report/make_numbers.py    # analysis, numbers, tables, figures, overleaf.zip
+\end{verbatim}
+\texttt{make\_numbers.py} also runs \texttt{report/make\_analysis.py}; no number in this report is
+typed by hand. The two validation studies of Section~\ref{sec:gates} (SPICE oracle and fresh
+corners) need several thousand extra ngspice runs and are rerun separately, as described in
+\texttt{report/analysis/README.md}.
+
+\subsection{Repository layout}
+\begin{verbatim}
+configs/project.yaml     assignment, seeds, sample counts, sizing, paths
+pdk/32nm_LP.pm           assigned model card
+src/leakml/              library: sampling, spice/, data/, ml/, gates/, circuit/, metrics
+scripts/00_ ... 12_      pipeline steps, run in order by `make all`
+data/                    transistor datasets, gate and circuit SPICE/ML results
+artifacts/               saved models, split indices, environment record
+results/tables, plots/   deliverable tables and figures
+netlists/examples/       example decks
+report/                  this report, make_numbers.py, make_analysis.py, analysis/
+tests/                   unit and integration tests (pytest)
+\end{verbatim}
+
+\subsection{Deliverables}
+\begin{table}[H]
+  \centering
+  \small
+  \caption{Deliverables of the brief and where they are.}
+  \label{tab:deliverables}
+  \begin{tabular}{@{}l>{\raggedright\arraybackslash}p{0.47\linewidth}>{\raggedright\arraybackslash}p{0.3\linewidth}@{}}
+    \toprule
+    & Files & In this report \\
+    \midrule
+    D1 Datasets & \texttt{data/transistor/\{nmos,pmos\}\_\{on,off\}.csv}, \RowsPerCase{} rows each &
+      Section~\ref{sec:data} \\
+    D2 Example netlists & \texttt{netlists/examples/*.sp} &
+      Figure~\ref{fig:netlist}, Table~\ref{tab:netlists}, Figure~\ref{fig:netlistnand} \\
+    D3 Data check & \texttt{results/tables/kirchhoff.csv}, \texttt{results/plots/trend\_*.pdf} &
+      Table~\ref{tab:kirchhoff}, Figure~\ref{fig:trends} \\
+    D4 Model comparison & \texttt{results/tables/model\_comparison*.csv} &
+      Tables~\ref{tab:models}, \ref{tab:modelsfull} \\
+    D5 Chosen models & \texttt{results/tables/chosen\_models\_test.csv},
+      \texttt{results/plots/pred\_vs\_spice\_*.pdf}, \texttt{artifacts/models/*.joblib} &
+      Table~\ref{tab:chosen}, Figure~\ref{fig:predvsspice} \\
+    D6 Gate results table & \texttt{results/tables/gate\_results.csv} & Table~\ref{tab:gates} \\
+    D7 Gate parity plot & \texttt{results/plots/gate\_parity.pdf} & Figure~\ref{fig:gateparity} \\
+    D8 Test-circuit results & \texttt{results/tables/circuit\_results.csv},
+      \texttt{results/plots/circuit\_parity.pdf} &
+      Table~\ref{tab:circuit}, Figure~\ref{fig:circuitparity} \\
+    D9 Code & \texttt{scripts/}, \texttt{src/leakml/}, \texttt{Makefile},
+      \texttt{configs/project.yaml} & Section~\ref{sec:appreproduce} \\
+    D10 Report & \texttt{report/} (this document) & -- \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 \subsection{Per-current model comparison}
 \begin{table}[H]

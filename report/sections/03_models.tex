@@ -193,41 +193,5 @@ largest errors are the ON-state $I_D$ and $I_S$ p95 (Table~\ref{tab:chosen}), wh
 entirely from rows near $V_D = V_S$, where the channel current crosses zero and a small absolute
 error is a large relative one. Inside a gate these currents are not used directly: the channel
 current of an ON transistor at $V_{DS}\approx0$ is fixed by the rest of the gate, and the ON
-currents that do enter the gate leakage, $I_G$ and $I_B$, are predicted well. Section~\ref{sec:error}
+currents that do enter the gate leakage, $I_G$ and $I_B$, are predicted well. Section~\ref{sec:errtrans}
 quantifies this.
-
-% ---------------------------------------------------------------------------------------------
-% NOTES FOR PHASE 4 (moved from Joanna's p2_transistor.tex; numbers are from her 10k-row
-% models and MUST be regenerated with the final models before use).
-%
-% Section 6, error analysis (transistor part):
-%  - ON-state I_D, I_S near V_D = V_S: largest relative errors; p95 for |V_DS| < 1 mV vs
-%    > 0.3 V (her numbers: nmos_on 101/214 % vs 41/47 %; pmos_on 163/277 % vs 38/38 %).
-%    40 % of ON data at |V_DS| <= 10 mV, so these rows dominate the ON statistics. ON I_G, I_B
-%    at small |V_DS| are good (her: p95 30/11 % nmos_on, 25/12 % pmos_on).
-%  - OFF-state I_S: tiny (a quarter of rows below 1e-15 A), changes sign; p95 by |V_DS| band.
-%    KCL-derived I_S helps but stays the worst OFF current.
-%  - Temperature: OFF I_B p95 grows from <1 % below 0 C to ~16-18 % above 85 C, following the
-%    steep T dependence of junction leakage; at low T I_B sits on the 1e-14 A floor.
-%  - Coverage of the operating point: the first (uniform) data set barely covered the bias points
-%    of transistors in a gate (ON: V_DS ~ 1e-7 V; OFF: source at own rail, drain at the other);
-%    gate simulations confirmed the problem but were never used to train/tune/select. Effect of
-%    the regenerated data on the OFF supply-side current I_S + I_B at the operating point (her:
-%    75.4 -> 88.9 % nmos_off, 80.7 -> 89.5 % pmos_off). Needs a pointer to Section 4 numbers.
-%
-% Section 7, limitations:
-%  - Accuracy at the gates' OFF operating point bounds gate/circuit accuracy; more rows there or
-%    a region-specific model would be next.
-%  - Relative error near zero current (ON I_D, I_S; OFF I_S) is unbounded; the floor only
-%    partly fixes it. Little effect on gate leakage, but dominates per-current statistics.
-%  - Grid edge: all chosen GBDTs use 63 leaves (largest in grid) -> larger trees may help.
-%  - V_G fixed at 0/VDD: AND2/OR2 inner inverter input is snapped to the nearest rail.
-%  - Junction current floor: many OFF rows have I_D, I_B within +-10 % of 1e-14 A at any T,
-%    consistent with BSIM4's default junction saturation current without AS/AD in the netlist;
-%    junction leakage is therefore not physically scaled with W.
-%  - MLP sensitive to early stopping (patience changed the error by about a third); a learning-
-%    rate schedule or longer training could make it competitive.
-%  - Model size: linear-leaf GBDTs (1000 trees per current) are large joblib files; compression
-%    or fewer, deeper trees would help.
-%  - Learning curve not saturated at 21k training rows (Section 2): more data still helps a bit.
-% ---------------------------------------------------------------------------------------------

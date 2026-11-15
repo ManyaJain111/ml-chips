@@ -46,8 +46,9 @@ scaling keeps its sign.
 
 \subsection{Oversampling of the operating points that matter}\label{sec:oversampling}
 Uniform $V_D$, $V_S$ almost never produce the bias points a transistor actually sees inside a
-static CMOS gate, and a regression model is least accurate where it has few neighbours. Five
-rules therefore replace part of the uniform draws. Each acts on a random subset of rows, all
+static CMOS gate, and a regression model is least accurate where it has few neighbours. Four
+rules therefore replace part of the uniform draws (the fourth item below explains how stacked
+transistors are covered). Each acts on a random subset of rows, all
 draws stay inside the ranges of Table~\ref{tab:ranges}, and the overridden voltages are rounded to
 the 10 significant digits the deck prints, so the stored inputs equal the simulated ones.
 \begin{itemize}
@@ -110,7 +111,7 @@ would still help slightly, at a proportional SPICE and training cost.
   curve still slopes down at \num{7000} rows, the training size proposed in the brief, and only
   starts to flatten towards \LCMaxSize{} rows. The ON-state $I_D$ and $I_S$ stay high and flat
   for a different reason: their p95 is dominated by rows where the channel current crosses zero
-  (Section~\ref{sec:models}).}
+  (Section~\ref{sec:errtrans}).}
   \label{fig:lc}
 \end{figure}
 

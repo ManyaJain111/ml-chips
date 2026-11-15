@@ -8,7 +8,7 @@
 \usepackage[T1]{fontenc}   % proper glyphs for _ < > | in \texttt and generated text
 \usepackage{lmodern}
 \usepackage{amsmath}
-\usepackage{array}         % needed by sections/p2_transistor.tex
+\usepackage{array}         % >{...}p{...} columns in tables
 \usepackage{booktabs}
 \usepackage{graphicx}
 \usepackage{float}
@@ -45,9 +45,22 @@
 \maketitle
 
 \begin{abstract}
-\todo{abstract: goal, method (single-FET SPICE $\to$ four ML models $\to$ gates $\to$ test
-circuit), headline accuracies (\GateMeanAcc{} gate, \CircuitMeanAcc{} circuit) against the
-99\,\% target, and the main limitation.}
+We estimate the static leakage current of CMOS logic in the \TechNode{} technology at a nominal
+supply of \VDDnom{} under process, voltage and temperature (PVT) variation with machine-learning
+models instead of full SPICE simulation. One model per transistor case (NMOS/PMOS, ON/OFF)
+predicts all four terminal currents; it is trained on \RowsPerCase{} single-transistor ngspice
+simulations per case, sampled with extra weight on the bias points that occur inside static
+gates, and after comparing polynomial ridge, random forest, gradient-boosted trees and an MLP on
+validation data the selected model is \ChosenSummary{}. Gate leakage is composed from these models
+using the SPICE node voltages, with the channel current of every ON transistor at near-zero
+$V_{DS}$ solved from Kirchhoff's current law, and the leakage of the \TestCircuit{} is the sum of
+its gate predictions plus a loading term for the gate-tunnelling current drawn by driven inputs.
+Over the 18 gate input cases at \NumCorners{} PVT corners the ML leakage reaches a mean accuracy of
+\GateMeanAcc{} (median error \GateMedianErr), \FreshMeanAcc{} on fresh corners, and the test circuit
+reaches \CircuitMeanAcc{} over \CircuitNumSims{} vector--corner combinations. A per-transistor
+SPICE oracle shows that the composition itself is exact (\OracleMeanAcc), so the remaining gap to
+the \qty{99}{\percent} target comes from the transistor models, mainly the PMOS gate-tunnelling
+current at low temperature.
 \end{abstract}
 
 \tableofcontents

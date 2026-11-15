@@ -8,7 +8,7 @@ pipeline outputs through `make_numbers.py`.
 
 ```bash
 make all                                  # 1. from the repo root: full pipeline, steps 00 -> 12
-uv run python report/make_numbers.py      # 2. regenerate numbers, tables, figures and the zip
+uv run python report/make_numbers.py      # 2. analysis, numbers, tables, figures and the zip
 ```
 
 3. On Overleaf: **New Project → Upload Project** and choose `report/overleaf.zip`
@@ -34,6 +34,8 @@ back into the repo before the next upload, because the zip is always built from 
 | `figures/*.pdf` | Copies of the `results/plots/*.pdf` the report uses (generated, committed) |
 | `overleaf.zip` | `main.tex` + `sections/` + `generated/` + `figures/` (generated, not committed) |
 | `make_numbers.py` | The generator |
+| `make_analysis.py` | Section 6 error analysis (called by `make_numbers.py`); writes `generated/analysis/` (CSVs + `error_vs_corner.pdf`, not in the zip) |
+| `analysis/` | One-off validation studies (SPICE oracle, fresh corners) with their scripts and summaries; see `analysis/README.md` |
 | `report.md` | The original outline (kept for reference) |
 
 ## Using the numbers

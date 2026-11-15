@@ -20,10 +20,10 @@ more than ten decades.
 The card ships with \texttt{rgatemod=1}, which adds an internal gate-resistance node. We set
 \texttt{rgatemod=0} for every deck. At DC no current flows through that resistance apart from
 the tunnelling current itself, so the selector does not change the physics of leakage, but with
-it enabled 15 of the 3\,600 AND2/OR2 gate decks failed to converge and ngspice reported $I_G = 0$
+it enabled 15 of the 3\,600 gate decks (all AND2/OR2) failed to converge and ngspice reported $I_G = 0$
 for many single-transistor rows. With \texttt{rgatemod=0} every deck converges, and the gate
 leakage moves by only about $4\times10^{-6}$ (relative, median), far below any error discussed in
-this report.
+this report (details in Section~\ref{sec:errgates}).
 % Source of the 15/3600 and 4e-6 figures: the investigation documented in src/leakml/pdk.py
 % (MODEL_OVERRIDES). They come from a one-off comparison, not from a pipeline output.
 

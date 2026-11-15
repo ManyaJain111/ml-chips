@@ -32,7 +32,8 @@ in four steps:
         width from the sizing, and $T$, $V_{DD}$ and the process parameters from the corner.
   \item \textbf{One batched prediction} for all transistors of all \NumGateSims{} cases, which
         returns the four terminal currents of each.
-  \item \textbf{Supply current.} The supply is the only other element on the VDD net, so by KCL
+  \item \textbf{Supply current.} The supply is the only other element on the VDD net, so by
+        Kirchhoff's current law (KCL)
         $I_{VDD}$ equals the sum of the currents flowing into all transistor terminals tied to
         VDD (the PMOS sources and bodies). The same bookkeeping on the input nodes gives the
         input current $I_{in}$, the gate-tunnelling current drawn from inputs at logic~1.
