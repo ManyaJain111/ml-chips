@@ -13,6 +13,64 @@
 
 ## Summary 
 
+```mermaid
+flowchart LR
+    PVT([PVT sampling<br/>process, VDD 0.9 V +/- 10 percent, temperature])
+
+    subgraph PA [Part A: Transistor]
+        TSP[ngspice single-transistor sims<br/>NMOS/PMOS, ON/OFF<br/>30k rows per case]
+        TML[Per-case ML models<br/>predict id, ig, is, ib]
+    end
+
+    subgraph PB [Part B: Gates]
+        GML[Gate leakage from transistor models<br/>INV, NAND2, NOR2, AND2, OR2]
+        GSP[(Full-gate SPICE<br/>200 PVT corners)]
+        GR[18 gate/input cases<br/>98.53 percent mean accuracy]
+    end
+
+    subgraph PC [Part C: Test circuit]
+        CML[8-bit parity checker from gate models<br/>7 XOR2 = 28 NAND2, with loading]
+        CSP[(Transistor-level SPICE<br/>256 vectors, 200 corners)]
+        CR[parity8 leakage<br/>98.92 percent mean accuracy]
+    end
+
+    PVT --> TSP
+    TSP --> TML
+    TML --> GML
+    GML --> GR
+    GSP -.-> GR
+    GML --> CML
+    CML --> CR
+    CSP -.-> CR
+
+    classDef input fill:#fef3c7,stroke:#f59e0b,stroke-width:2px,color:#78350f
+    classDef partA fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#1e3a8a
+    classDef partB fill:#ccfbf1,stroke:#0d9488,stroke-width:2px,color:#134e4a
+    classDef partC fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#3b0764
+    classDef spice fill:#f1f5f9,stroke:#64748b,stroke-width:2px,stroke-dasharray:5,color:#334155
+    classDef result fill:#dcfce7,stroke:#16a34a,stroke-width:3px,color:#14532d
+
+    class PVT input
+    class TSP,TML partA
+    class GML partB
+    class CML partC
+    class GSP,CSP spice
+    class GR,CR result
+
+    style PA fill:#f8fafc,stroke:#2563eb,stroke-width:2px,stroke-dasharray:6,color:#1e3a8a
+    style PB fill:#f8fafc,stroke:#0d9488,stroke-width:2px,stroke-dasharray:6,color:#134e4a
+    style PC fill:#f8fafc,stroke:#7c3aed,stroke-width:2px,stroke-dasharray:6,color:#3b0764
+
+    linkStyle 0 stroke:#f59e0b,stroke-width:2px
+    linkStyle 1 stroke:#2563eb,stroke-width:3px
+    linkStyle 2 stroke:#0d9488,stroke-width:3px
+    linkStyle 3 stroke:#0d9488,stroke-width:3px
+    linkStyle 4 stroke:#64748b,stroke-width:2px
+    linkStyle 5 stroke:#7c3aed,stroke-width:3px
+    linkStyle 6 stroke:#7c3aed,stroke-width:3px
+    linkStyle 7 stroke:#64748b,stroke-width:2px
+```
+
 Static leakage of a CMOS circuit varies strongly with process (P), supply voltage (V) and
 temperature (T), and simulating every PVT corner in SPICE is slow. This project trains machine-learning
 models on single-transistor ngspice simulations, then reuses them to predict leakage hierarchically
