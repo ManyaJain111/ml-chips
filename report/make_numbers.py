@@ -954,6 +954,269 @@ except Exception as e:  # noqa: BLE001
     missing.append(f"netlists/examples/fet_nmos_off.sp excerpt ({type(e).__name__}: {e})")
     (OUT / "netlist_fet_nmos_off.tex").write_text(r"\todo{missing: example netlist}" + "\n")
 
+
+# ------------------------------------------------------------------ gates: extra (Section 4)
+GATE_DATA = ROOT / "data" / "gates"
+ANALYSIS = ROOT / "report" / "analysis"
+
+
+def _gate_rows() -> pd.DataFrame:
+    return io.read_csv(GATE_DATA / "gate_results.csv")
+
+
+def _logic_ok(path: Path) -> str:
+    d = io.read_csv(path)
+    ok = d["logic_ok"].astype(str).str.lower().eq("true")
+    return rf"\num{{{int(ok.sum())}}}/\num{{{len(d)}}}"
+
+
+define("GateLogicOk", lambda: _logic_ok(GATE_DATA / "gate_spice.csv"), "gate_spice logic_ok")
+define("GateSnapMax",
+       lambda: rf"\qty{{{_gate_rows()['max_vg_snap_err'].max():.1e}}}{{\volt}}",
+       "gate_results max_vg_snap_err")  # fmt: skip
+
+
+def _iin_summary() -> dict:
+    g = _gate_rows()
+    return summarize(g["i_in_ml"].to_numpy(), g["i_in_spice"].to_numpy(),
+                     i_floor=float(cfg("ml.i_floor_a")))  # fmt: skip
+
+
+define("GateIinMeanAcc", lambda: pct(_iin_summary()["mean_acc_pct"], 2), "gate i_in mean acc")
+define("GateIinPninetyfiveErr", lambda: pct(_iin_summary()["p95_err_pct"], 1), "gate i_in p95")
+define("GateIinBias", lambda: pct(_iin_summary()["bias_pct"], 2, plus=True), "gate i_in bias")
+
+
+def _iin_share() -> float:
+    g = _gate_rows()
+    h = g[g["i_in_spice"] > float(cfg("ml.i_floor_a"))]
+    return 100 * float(np.median(h["i_in_spice"] / h["i_vdd_spice"]))
+
+
+define("GateIinShare", lambda: pct(_iin_share(), 0), "median i_in/i_vdd, gates with a high input")
+
+
+def _gate_subset(gate: str) -> dict:
+    g = _gate_rows()
+    g = g[g["gate"] == gate]
+    return summarize(g["i_vdd_ml"].to_numpy(), g["i_vdd_spice"].to_numpy(),
+                     i_floor=float(cfg("ml.i_floor_a")))  # fmt: skip
+
+
+define("GateNandMeanAcc", lambda: pct(_gate_subset("NAND2")["mean_acc_pct"], 2), "NAND2 mean acc")
+define("GateNandMedianErr", lambda: pct(_gate_subset("NAND2")["median_err_pct"], 2), "NAND2 med")
+define("GateNandPninetyfiveErr", lambda: pct(_gate_subset("NAND2")["p95_err_pct"], 2), "NAND2 p95")
+define("GateNandMaxErr", lambda: pct(_gate_subset("NAND2")["max_err_pct"], 1), "NAND2 max")
+define("GateNandBias", lambda: pct(_gate_subset("NAND2")["bias_pct"], 2, plus=True), "NAND2 bias")
+
+define("ConstLeafGateMedianErr",
+       lambda: pct(one(need(const_gate, "gate", "median_err_pct"),
+                       const_gate["gate"] == "ALL")["median_err_pct"], 2),
+       f"{CONST_LEAF_COMMIT} gate_results ALL median_err_pct")  # fmt: skip
+
+
+def _on_vds() -> dict[str, float]:
+    """|vds| of every ON FET in every gate row, from the SPICE node voltages (as step 08 sees them)."""
+    from leakml.gates.ml_model import KCL_VDS_MAX
+    from leakml.gates.topology import get_gate, input_levels
+
+    g = io.read_csv(GATE_DATA / "gate_spice.csv")
+    free, biased = [], []
+    for (name, bits), sub in g.groupby(["gate", "inputs"]):
+        gate = get_gate(name)
+        vdd = sub["vdd"].to_numpy(dtype=float)
+        v = {"vdd": vdd, "0": np.zeros_like(vdd)}
+        v |= {pin: vdd * float(lv) for pin, lv in input_levels(gate, bits).items()}
+        for node in (gate.output, *gate.internal_nodes):
+            v[node] = sub[f"v_{node}_spice"].to_numpy(dtype=float)
+        for f in gate.fets:
+            vg = v[f.g]
+            on = (vg > vdd / 2) if f.device == "nmos" else (vg < vdd / 2)
+            vds = np.abs(v[f.d] - v[f.s])[on]
+            free.extend(vds[vds < KCL_VDS_MAX])
+            biased.extend(vds[vds >= KCL_VDS_MAX])
+    free, biased = np.array(free), np.array(biased)
+    return {"free_med": float(np.median(free)), "free_max": float(free.max()),
+            "free_n": len(free), "biased_min": float(biased.min()), "thr": KCL_VDS_MAX}  # fmt: skip
+
+
+define("OnVdsMedian", lambda: rf"\qty{{{_on_vds()['free_med']:.0e}}}{{\volt}}", "in-gate ON |vds|")
+define("OnVdsMax", lambda: rf"\qty{{{_on_vds()['free_max']:.0e}}}{{\volt}}", "in-gate ON |vds|")
+define("OnVdsCount", lambda: count(_on_vds()["free_n"]), "number of KCL-corrected FET rows")
+define("OnBiasedVdsMin", lambda: rf"\qty{{{_on_vds()['biased_min']:.2f}}}{{\volt}}",
+       "smallest |vds| of an ON FET above the KCL threshold")  # fmt: skip
+define("KclVdsMax", lambda: rf"\qty{{{_on_vds()['thr'] * 1e3:g}}}{{\milli\volt}}",
+       "ml_model.KCL_VDS_MAX")  # fmt: skip
+
+
+# Report analyses (report/analysis/): guarded against staleness by the ML gate mean accuracy they
+# were computed against, which must equal the current results/tables/gate_results.csv value.
+def _analysis(path: str, ref_acc: Callable[[pd.DataFrame], float]) -> pd.DataFrame:
+    d = pd.read_csv(ANALYSIS / path, dtype={"inputs": str})
+    now = float(gate_all("mean_acc_pct"))
+    if abs(ref_acc(d) - now) > 1e-6:
+        raise ValueError(f"stale: computed for gate mean acc {ref_acc(d):.4f}, now {now:.4f}; "
+                         "rerun report/analysis (see its README)")  # fmt: skip
+    return d
+
+
+def _oracle() -> pd.DataFrame:
+    return _analysis("oracle/oracle_summary.csv",
+                     lambda d: float(d.loc[d["composition"] == "ml_kcl", "mean_acc"].iloc[0])
+                     ).set_index("composition")  # fmt: skip
+
+
+for nm, col, d in (("MeanAcc", "mean_acc", 3), ("MedianErr", "median", 4),
+                   ("PninetyfiveErr", "p95", 3), ("MaxErr", "max", 2)):  # fmt: skip
+    define(f"Oracle{nm}", lambda col=col, d=d: pct(_oracle().loc["spice_oracle", col], d),
+           f"report/analysis/oracle/oracle_summary.csv {col}")  # fmt: skip
+
+
+def _attr(gate: str, inputs: str, fixed: str) -> str:
+    _oracle()  # staleness guard: computed in the same oracle run
+    d = pd.read_csv(ANALYSIS / "oracle" / "worst_case_attribution.csv", dtype={"inputs": str})
+    r = d[(d["gate"] == gate) & (d["inputs"] == inputs) & (d["fixed"] == fixed)]
+    if len(r) != 1:
+        raise LookupError(f"{gate} {inputs} {fixed}: {len(r)} rows")
+    return pct(r["mean_acc"].iloc[0], 2)
+
+
+for nm, g, b, fx in (("NandTenBase", "NAND2", "10", "none"),
+                     ("NandTenNmosOnId", "NAND2", "10", "nmos_on.id"),
+                     ("NandTenPmosOnIg", "NAND2", "10", "pmos_on.ig"),
+                     ("NorTenBase", "NOR2", "10", "none"),
+                     ("NorTenPmosOffIs", "NOR2", "10", "pmos_off.is"),
+                     ("NorElevenBase", "NOR2", "11", "none"),
+                     ("NorElevenPmosOffIs", "NOR2", "11", "pmos_off.is")):  # fmt: skip
+    define(f"Attr{nm}", lambda g=g, b=b, fx=fx: _attr(g, b, fx),
+           f"oracle/worst_case_attribution.csv {g} {b} {fx}")  # fmt: skip
+
+
+def _error_source(rank: int, what: str) -> str:
+    _oracle()
+    d = pd.read_csv(ANALYSIS / "oracle" / "error_sources.csv")
+    r = d.sort_values("mean_acc_gain", ascending=False).iloc[rank]
+    if what == "name":
+        return rf"{tt(r['case'])} {TARGET_TEX[r['current']]}"
+    return pct(r["gate_mean_acc_if_exact"], 2)
+
+
+for rank, nm in ((0, "First"), (1, "Second")):
+    define(f"ErrorSource{nm}", lambda r=rank: _error_source(r, "name"), "error_sources rank")
+    define(f"ErrorSource{nm}Acc", lambda r=rank: _error_source(r, "acc"), "error_sources rank")
+
+
+def _fresh() -> pd.DataFrame:
+    return _analysis("fresh_corners/overall_kcl_direct_orig_vs_fresh.csv",
+                     lambda d: float(d.loc[(d["corners"] == "orig") & (d["method"] == "KCL"),
+                                           "mean_acc_pct"].iloc[0]))  # fmt: skip
+
+
+def _fresh_val(corners: str, method: str, col: str) -> float:
+    d = _fresh()
+    return float(d.loc[(d["corners"] == corners) & (d["method"] == method), col].iloc[0])
+
+
+for nm, col, d, plus in (("MeanAcc", "mean_acc_pct", 2, False), ("MedianErr", "median_err_pct", 2, False),
+                         ("PninetyfiveErr", "p95_err_pct", 2, False), ("MaxErr", "max_err_pct", 1, False),
+                         ("Bias", "bias_pct", 2, True)):  # fmt: skip
+    define(f"Fresh{nm}", lambda col=col, d=d, plus=plus: pct(_fresh_val("fresh", "KCL", col), d, plus),
+           f"fresh_corners overall {col}")  # fmt: skip
+define("FreshDirectMeanAcc", lambda: pct(_fresh_val("fresh", "direct", "mean_acc_pct"), 2),
+       "fresh_corners overall direct mean acc")  # fmt: skip
+define("FreshNumCorners",
+       lambda: count(len(pd.read_csv(ANALYSIS / "fresh_corners" / "corners_fresh.csv"))),
+       "corners_fresh.csv rows")  # fmt: skip
+define("FreshLogicOk", lambda: _logic_ok(ANALYSIS / "fresh_corners" / "gate_spice_fresh.csv"),
+       "gate_spice_fresh logic_ok")  # fmt: skip
+
+
+def _fresh_seed() -> str:
+    import re
+
+    src = (ANALYSIS / "fresh_corners.py").read_text()
+    m = re.search(r"cfg\.seeds\.corners \+ (\d+)", src)
+    if not m:
+        raise LookupError("seed offset not found in fresh_corners.py")
+    return str(int(cfg("seeds.corners")) + int(m.group(1)))
+
+
+define("FreshSeed", _fresh_seed, "fresh_corners.py seed")
+
+
+def _fresh_table() -> str:
+    d = _fresh()
+    rows = []
+    for corners, label in (("orig", "original"), ("fresh", "fresh")):
+        for method, mlabel in (("KCL", "KCL"), ("direct", "direct")):
+            r = d[(d["corners"] == corners) & (d["method"] == method)].iloc[0]
+            rows.append([label if method == "KCL" else "", mlabel, pct(r.median_err_pct, 2),
+                         pct(r.p95_err_pct, 2), pct(r.max_err_pct, 1), pct(r.bias_pct, 2, plus=True),
+                         pct(r.mean_acc_pct, 2)])  # fmt: skip
+    return tabular("llrrrrr", ["Corners", "Composition", "Median err.", "p95 err.", "Max err.",
+                               "Bias", "Mean acc."], rows, [2])  # fmt: skip
+
+
+write_table(
+    "fresh", _fresh_table, "report/analysis/fresh_corners/overall_kcl_direct_orig_vs_fresh.csv"
+)
+
+
+# ------------------------------------------------------------------ circuit: extra (Section 5)
+def _circuit_def():
+    from leakml.circuit.definition import get_circuit
+
+    return get_circuit(cfg("assignment.test_circuit"))
+
+
+def _gate_mix() -> str:
+    from collections import Counter
+
+    cnt = Counter(i.gate for i in _circuit_def().instances)
+    return ", ".join(rf"\num{{{n}}} {g}" for g, n in sorted(cnt.items()))
+
+
+define("CircuitNumGates", lambda: count(len(_circuit_def().instances)), "circuit instances")
+define("CircuitGateMix", _gate_mix, "circuit gate types")
+define("CircuitNumXor",
+       lambda: count(len({i.name.rsplit("_g", 1)[0] for i in _circuit_def().instances
+                          if "_g" in i.name})), "XOR2 blocks")  # fmt: skip
+define("CircuitNumInputs", lambda: count(len(_circuit_def().primary_inputs)), "primary inputs")
+define("CircuitNumVectors", lambda: count(2 ** len(_circuit_def().primary_inputs)), "vectors")
+define("CircuitLogicOk", lambda: _logic_ok(ROOT / "data" / "circuit" / "circuit_spice.csv"),
+       "circuit_spice logic_ok")  # fmt: skip
+
+
+def _load_share() -> float:
+    c = io.read_csv(ROOT / "data" / "circuit" / "circuit_ml.csv")
+    return 100 * float(np.median(c["i_load_ml"] / c["i_vdd_ml"]))
+
+
+define("CircuitLoadShare", lambda: pct(_load_share(), 0), "median i_load_ml / i_vdd_ml")
+
+
+def _ones_range(col: str, lo: bool, plus: bool = False) -> str:
+    d = need(cr, "scope", col)
+    o = d[d["scope"].str.strip().str.startswith("ones =")][col]
+    return pct(o.min() if lo else o.max(), 2, plus)
+
+
+define("CircuitOnesAccMin", lambda: _ones_range("mean_acc_pct", True), "circuit ones rows")
+define("CircuitOnesAccMax", lambda: _ones_range("mean_acc_pct", False), "circuit ones rows")
+define("CircuitOnesBiasMin", lambda: _ones_range("bias_pct", True, True), "circuit ones rows")
+define("CircuitOnesBiasMax", lambda: _ones_range("bias_pct", False, True), "circuit ones rows")
+define("CircuitIinMeanAcc", lambda: pct(circ_row("primary-input current")["mean_acc_pct"], 2),
+       "circuit_results primary-input current mean acc")  # fmt: skip
+
+
+def _driver(feature: str) -> str:
+    d = load_csv("circuit_error_drivers")
+    r = one(need(d, "feature", "spearman_rho_vs_signed_error"), d["feature"] == feature)
+    return num(r["spearman_rho_vs_signed_error"], 2)
+
+
+define("CircuitTempRho", lambda: _driver("temp"), "circuit_error_drivers temp")
+
 # ================================================================== write numbers.tex
 lines = [
     "% Generated by report/make_numbers.py. Do not edit: rerun the script after `make all`.",

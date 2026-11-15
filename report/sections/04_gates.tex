@@ -1,4 +1,201 @@
 % Gate results
 \section{Gate results}\label{sec:gates}
 
-\todo{method (SPICE node voltages, KCL correction), D6 table, D7 parity plot, best and worst cases}
+\subsection{Setup and SPICE reference}
+Five static CMOS gates are evaluated: INV, NAND2, NOR2, and AND2/OR2 as a NAND2/NOR2 followed by
+an inverter. With every input combination this gives 18 cases, each simulated at the same
+\NumCorners{} PVT corners. A corner is one draw of $V_{DD}$, $T$ and the process parameters from
+the distributions of Table~\ref{tab:ranges}; all NMOS in a gate share one process draw and all PMOS
+another. The corners are drawn once (seed \SeedCorners) and shared with the test circuit
+(Section~\ref{sec:circuit}), which is what lets the circuit reuse the gate results corner by
+corner. Every NMOS has $W = \NmosWMult\,L_{\min}$ and every PMOS $W = \PmosWMult\,L_{\min}$
+(Section~\ref{sec:setup}).
+
+The SPICE reference simulates each of the \NumGateSims{} (gate, inputs, corner) combinations as a
+complete transistor-level deck (AND2 and OR2 as one deck each, never NAND2 + INV added), with the
+inputs driven at exactly $0$ or $V_{DD}$. The leakage is the current delivered by the supply,
+$I_{VDD} = -\texttt{i(vvdd)}$. Each deck also records the output and internal node voltages
+($x$ between the series NMOS, $y$ between the series PMOS, $n_1$ at the first-stage output of
+AND2/OR2), and the output level is checked against the gate's logic function: the check passes
+in \GateLogicOk{} rows. These results are used for evaluation only; the only values the ML side
+reads from them are the node voltages.
+
+\subsection{ML composition}
+For each (gate, inputs, corner) the gate leakage is assembled from the four transistor models
+in four steps:
+\begin{enumerate}
+  \item \textbf{Node voltages.} $V_{DD}$, ground and the inputs are known exactly; the output
+        and internal nodes take the voltages recorded by SPICE for the same case, as the brief
+        prescribes.
+  \item \textbf{Transistor rows.} From the gate topology each transistor's $(V_D, V_G, V_S,
+        V_B)$ follows from its nodes, its case (NMOS/PMOS, ON/OFF) from its gate voltage, its
+        width from the sizing, and $T$, $V_{DD}$ and the process parameters from the corner.
+  \item \textbf{One batched prediction} for all transistors of all \NumGateSims{} cases, which
+        returns the four terminal currents of each.
+  \item \textbf{Supply current.} The supply is the only other element on the VDD net, so by KCL
+        $I_{VDD}$ equals the sum of the currents flowing into all transistor terminals tied to
+        VDD (the PMOS sources and bodies). The same bookkeeping on the input nodes gives the
+        input current $I_{in}$, the gate-tunnelling current drawn from inputs at logic~1.
+\end{enumerate}
+The transistor models only saw $V_G \in \{0, V_{DD}\}$. Inside AND2/OR2 the inverter's gate is
+driven by the recorded voltage of $n_1$, which is snapped to the nearest rail. The largest snap
+over all rows is \GateSnapMax, so the snap is negligible.
+
+\subsection{KCL composition}\label{sec:kcl}
+Summing the predicted currents as they come out of the models (the \emph{direct} composition)
+fails for one class of transistor. An ON transistor in a static gate connects two nodes at almost
+the same voltage: over all gate rows the \OnVdsCount{} ON transistors below the threshold used
+here have a median $|V_{DS}|$ of \OnVdsMedian{} and at most \OnVdsMax. The current such a
+transistor carries is not set by its own minute $V_{DS}$ but by the rest of the gate, typically
+the OFF device it feeds, and it is a leakage-sized current. The transistor model, trained over
+the full $V_D$, $V_S$ range, has an absolute error near $V_{DS} = 0$ that is large compared with
+that current, so in the direct sum the error of the ON PMOS on the VDD net goes straight into
+$I_{VDD}$.
+
+The KCL composition therefore treats the channel current of every ON transistor with
+$|V_{DS}| <$ \KclVdsMax{} as an unknown. Its predicted gate and body currents are kept (they do
+not suffer from the zero crossing), its source current follows from its own KCL,
+$I_S = -(I_D + I_G + I_B)$, and the unknown drain currents are solved from KCL at the floating
+nodes (output, $x$, $y$, $n_1$): the currents into all terminals on each node sum to zero. All
+other transistors keep their model currents. The threshold sits orders of magnitude above the
+in-gate ON values and well below the smallest $|V_{DS}|$ of a genuinely biased ON transistor
+(\OnBiasedVdsMin, e.g.\ the lower PMOS of NOR2 \texttt{10}), which keeps its model current.
+
+When ON transistors are in parallel (both PMOS of NAND2 \texttt{00}) only the sum of their
+channel currents is determined. The system is then solved with the pseudo-inverse, which picks
+the minimum-norm solution and splits the sum equally. Any other split differs by a current
+circulating around the parallel loop, which enters and leaves the VDD net and therefore cannot
+change $I_{VDD}$; the code verifies this for every pattern of corrected transistors. The input
+current is unaffected, because gate currents are never corrected.
+
+\paragraph{SPICE-oracle validation.}
+To check the composition independently of the ML models, every transistor of every gate row was
+simulated \emph{alone} in ngspice at exactly the terminal voltages the model sees, and these
+SPICE currents were fed through the same KCL composition
+(\texttt{report/analysis/oracle.py}). Over all \NumGateSims{} rows this reproduces the gate's own
+SPICE leakage with a mean accuracy of \OracleMeanAcc{} (median error \OracleMedianErr, p95
+\OraclePninetyfiveErr, max \OracleMaxErr). The bookkeeping, the sign convention and the
+assumption that each transistor's current is fixed by its in-gate terminal voltages are therefore
+exact to well below the ML error: every remaining gate-level error comes from the transistor
+models.
+
+\subsection{Results}
+Table~\ref{tab:gates} lists the 18 cases (Deliverable~6) and Figure~\ref{fig:gateparity} shows
+all \NumGateSims{} predictions against SPICE (Deliverable~7). Over all rows the KCL composition
+reaches a mean accuracy of \GateMeanAcc{}, with median error \GateMedianErr{}, p95
+\GatePninetyfiveErr{}, maximum \GateMaxErr{} and a small positive bias of \GateBias{};
+\GateWithinTen{} of the rows are within \qty{10}{\percent} of SPICE. The direct composition
+(Figure~\ref{fig:gateparitydirect}) reaches only \GateDirectMeanAcc{} (median error
+\GateDirectMedianErr, p95 \GateDirectPninetyfiveErr).
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{Gate results (Deliverable~6): SPICE and ML median leakage, bias (median signed
+  relative error), median and 95th-percentile absolute relative error and mean accuracy per gate
+  and input combination, \NumCorners{} corners each, KCL composition. Last row: all
+  \NumGateSims{} rows.}
+  \label{tab:gates}
+  \input{generated/tab_gates}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.49\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{gate_parity.pdf}
+    \caption{Gate parity plot (Deliverable~7), KCL composition: ML against SPICE leakage for
+    all \NumGateSims{} gate simulations, log axes. Notice that the points stay on the diagonal
+    over the whole leakage range, for every gate type.}
+    \label{fig:gateparity}
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.49\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{gate_parity_direct.pdf}
+    \caption{The same with the direct composition. At the smallest leakages the two methods
+    agree (cases without an ON PMOS on the VDD net); above them the direct sum scatters, because the error of the
+    ON PMOS channel current enters $I_{VDD}$ unchecked.}
+    \label{fig:gateparitydirect}
+  \end{minipage}
+\end{figure}
+
+\paragraph{Best and worst cases.}
+The most accurate case is \GateBestCase{} (\GateBestAcc). Its leakage is set by OFF PMOS with the
+source on VDD and the drain at ground, exactly the full-$V_{DD}$ OFF operating point that the
+source and drain pinning oversample (Section~\ref{sec:oversampling}), while its ON NMOS are
+handled by KCL. The least accurate case is \GateWorstCase{} (\GateWorstAcc). There the upper
+NMOS is ON but cannot pull node $x$ above about a threshold below $V_{DD}$, so it conducts at a
+substantial $|V_{DS}|$ with its source floating at $x$: it is not KCL-corrected, and its predicted
+drain current, which must equal the leakage of the OFF NMOS below it, enters the output-node KCL
+and hence the PMOS supply current. The oracle attribution
+(\texttt{report/analysis/oracle\_sub.py}) confirms this: replacing only the \texttt{nmos\_on}
+drain current by its SPICE value raises the case from \AttrNandTenBase{} to
+\AttrNandTenNmosOnId{}. In NOR2 \texttt{10} and \texttt{11} the error is almost entirely the
+OFF PMOS source current; making it exact raises them from \AttrNorTenBase{} and
+\AttrNorElevenBase{} to \AttrNorTenPmosOffIs{} and \AttrNorElevenPmosOffIs. Over all rows the
+largest single error source is \ErrorSourceFirst{} (gate accuracy \ErrorSourceFirstAcc{} if it
+were exact), followed by \ErrorSourceSecond{} (\ErrorSourceSecondAcc).
+The worst individual row is \GateWorstRowCase{} at \GateWorstRowTemp{} and \GateWorstRowVDD{}
+(\GateWorstRowErr); Table~\ref{tab:gateworst} lists the worst rows.
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{The gate rows with the largest relative error (KCL composition).}
+  \label{tab:gateworst}
+  \input{generated/tab_gate_worst}
+\end{table}
+
+\paragraph{Input current.}
+The test circuit needs a second gate-level quantity: the gate-tunnelling current $I_{in}$ that
+inputs at logic~1 draw (Section~\ref{sec:circuit}). Over the rows with a high input it is
+predicted with a mean accuracy of \GateIinMeanAcc{} (median error \GateIinMedianErr, p95
+\GateIinPninetyfiveErr, bias \GateIinBias). It is not a small correction: in those rows $I_{in}$
+is \GateIinShare{} of $I_{VDD}$ at the median.
+
+\paragraph{History.}
+Table~\ref{tab:history} shows how the gate accuracy developed. The first three rows are earlier
+runs, quoted as recorded at the time; they can no longer be regenerated. The large steps came
+from the composition and from sampling the operating points that gates actually use, not from
+the choice of model.
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{Development of the gate-level accuracy (all 18 cases, \NumCorners{} corners). Rows
+  1--3: earlier runs (numbers as recorded then); rows 4--5: generated from the commit stated and
+  from the final run.}
+  \label{tab:history}
+  \begin{tabular}{llrr}
+    \toprule
+    Stage & Composition & Median err. & Mean acc. \\
+    \midrule
+    1.\ first models, uniform transistor data & direct & \qty{846}{\percent} & -- \\
+    2.\ + low-$|V_{DS}|$ ON rows & direct & \qty{14}{\percent} & -- \\
+    3.\ + KCL composition & KCL & \qty{7.0}{\percent} & \qty{91.5}{\percent} \\
+    4.\ \RowsPerCase{} rows, source/drain pinning, constant-leaf GBDT (\ConstLeafCommit) &
+        KCL & \ConstLeafGateMedianErr & \ConstLeafGateMeanAcc \\
+    5.\ final: linear-leaf GBDT & KCL & \GateMedianErr & \GateMeanAcc \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Generalisation to fresh corners}
+The sampling rules of Section~\ref{sec:oversampling} were found by analysing gate errors on the
+\NumCorners{} evaluation corners. To rule out that anything was tuned to those corners, the whole
+gate evaluation was repeated on \FreshNumCorners{} \emph{new} corners (seed \FreshSeed, same
+distributions; \texttt{report/analysis/fresh\_corners.py}), with new SPICE references (logic
+check \FreshLogicOk) and unchanged models. Table~\ref{tab:fresh} shows no degradation: the mean
+accuracy on the fresh corners is \FreshMeanAcc{} (median error \FreshMedianErr, p95
+\FreshPninetyfiveErr), against \GateMeanAcc{} on the original ones. The KCL composition is stable
+across corner sets, while the direct sum varies much more (\GateDirectMeanAcc{} vs
+\FreshDirectMeanAcc).
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{Gate accuracy on the original evaluation corners and on \FreshNumCorners{} fresh
+  corners (all 18 cases), for both compositions.}
+  \label{tab:fresh}
+  \input{generated/tab_fresh}
+\end{table}

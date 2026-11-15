@@ -220,6 +220,60 @@
 \newcommand{\ConstLeafValMedianErrPmosOff}{\qty{3.0}{\percent}}
 \newcommand{\ConstLeafValPninetyfiveErrPmosOff}{\qty{24.2}{\percent}}
 \newcommand{\ConstLeafGateMeanAcc}{\qty{93.95}{\percent}}
+\newcommand{\GateLogicOk}{\num{3600}/\num{3600}}
+\newcommand{\GateSnapMax}{\qty{1.2e-05}{\volt}}
+\newcommand{\GateIinMeanAcc}{\qty{98.09}{\percent}}
+\newcommand{\GateIinPninetyfiveErr}{\qty{4.6}{\percent}}
+\newcommand{\GateIinBias}{\qty[retain-explicit-plus]{-0.88}{\percent}}
+\newcommand{\GateIinShare}{\qty{72}{\percent}}
+\newcommand{\GateNandMeanAcc}{\qty{96.97}{\percent}}
+\newcommand{\GateNandMedianErr}{\qty{2.14}{\percent}}
+\newcommand{\GateNandPninetyfiveErr}{\qty{7.75}{\percent}}
+\newcommand{\GateNandMaxErr}{\qty{26.4}{\percent}}
+\newcommand{\GateNandBias}{\qty[retain-explicit-plus]{+1.35}{\percent}}
+\newcommand{\ConstLeafGateMedianErr}{\qty{5.04}{\percent}}
+\newcommand{\OnVdsMedian}{\qty{2e-07}{\volt}}
+\newcommand{\OnVdsMax}{\qty{6e-06}{\volt}}
+\newcommand{\OnVdsCount}{\num{7600}}
+\newcommand{\OnBiasedVdsMin}{\qty{0.17}{\volt}}
+\newcommand{\KclVdsMax}{\qty{1}{\milli\volt}}
+\newcommand{\OracleMeanAcc}{\qty{99.992}{\percent}}
+\newcommand{\OracleMedianErr}{\qty{0.0004}{\percent}}
+\newcommand{\OraclePninetyfiveErr}{\qty{0.015}{\percent}}
+\newcommand{\OracleMaxErr}{\qty{1.15}{\percent}}
+\newcommand{\AttrNandTenBase}{\qty{94.76}{\percent}}
+\newcommand{\AttrNandTenNmosOnId}{\qty{97.63}{\percent}}
+\newcommand{\AttrNandTenPmosOnIg}{\qty{96.42}{\percent}}
+\newcommand{\AttrNorTenBase}{\qty{97.31}{\percent}}
+\newcommand{\AttrNorTenPmosOffIs}{\qty{99.95}{\percent}}
+\newcommand{\AttrNorElevenBase}{\qty{97.10}{\percent}}
+\newcommand{\AttrNorElevenPmosOffIs}{\qty{99.78}{\percent}}
+\newcommand{\ErrorSourceFirst}{\texttt{pmos\_on} $I_G$}
+\newcommand{\ErrorSourceFirstAcc}{\qty{98.85}{\percent}}
+\newcommand{\ErrorSourceSecond}{\texttt{pmos\_off} $I_S$}
+\newcommand{\ErrorSourceSecondAcc}{\qty{98.14}{\percent}}
+\newcommand{\FreshMeanAcc}{\qty{97.69}{\percent}}
+\newcommand{\FreshMedianErr}{\qty{1.70}{\percent}}
+\newcommand{\FreshPninetyfiveErr}{\qty{5.93}{\percent}}
+\newcommand{\FreshMaxErr}{\qty{29.2}{\percent}}
+\newcommand{\FreshBias}{\qty[retain-explicit-plus]{+0.70}{\percent}}
+\newcommand{\FreshDirectMeanAcc}{\qty{83.30}{\percent}}
+\newcommand{\FreshNumCorners}{\num{200}}
+\newcommand{\FreshLogicOk}{\num{3600}/\num{3600}}
+\newcommand{\FreshSeed}{3026}
+\newcommand{\CircuitNumGates}{\num{28}}
+\newcommand{\CircuitGateMix}{\num{28} NAND2}
+\newcommand{\CircuitNumXor}{\num{7}}
+\newcommand{\CircuitNumInputs}{\num{8}}
+\newcommand{\CircuitNumVectors}{\num{256}}
+\newcommand{\CircuitLogicOk}{\num{51200}/\num{51200}}
+\newcommand{\CircuitLoadShare}{\qty{27}{\percent}}
+\newcommand{\CircuitOnesAccMin}{\qty{98.10}{\percent}}
+\newcommand{\CircuitOnesAccMax}{\qty{98.23}{\percent}}
+\newcommand{\CircuitOnesBiasMin}{\qty[retain-explicit-plus]{+0.46}{\percent}}
+\newcommand{\CircuitOnesBiasMax}{\qty[retain-explicit-plus]{+1.05}{\percent}}
+\newcommand{\CircuitIinMeanAcc}{\qty{98.09}{\percent}}
+\newcommand{\CircuitTempRho}{\num{-0.30}}
 
 % Learning curve: \LCMedian{case}{target}{n_train} and \LCPninetyfive{case}{target}{n_train},
 % e.g. \LCMedian{nmos_off}{id}{7000} (validation error of the chosen model type).
