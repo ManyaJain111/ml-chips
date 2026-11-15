@@ -25,6 +25,8 @@ from leakml.sampling import (
     SOURCE_PIN_CASES,
     SOURCE_PIN_FRAC,
     SOURCE_PIN_RANGE,
+    STACK_PIN_FRAC,
+    STACK_VS_BAND,
     corner_process_params,
     draw_corners,
     draw_transistor_samples,
@@ -87,7 +89,8 @@ def test_low_vds_oversampling(case, dev_cfg, card):
         return np.array([float(format_number(v)) == v for v in df[col]])
 
     low = exact("vd") & exact("vs")
-    if case in LOW_VDS_CASES:
+    if case in LOW_VDS_CASES:  # stack-pinned rows are exact too, but at large |vds|
+        low &= (vds.abs() <= LOW_VDS_RANGE[1] * 1.001).to_numpy()
         assert low.mean() == pytest.approx(LOW_VDS_FRAC, abs=0.04)
         mag = vds[low].abs()
         assert (mag >= 0.9 * LOW_VDS_RANGE[0]).all() and (mag <= LOW_VDS_RANGE[1] * 1.001).all()
@@ -102,7 +105,7 @@ def test_low_vds_keeps_uniform_rows(dev_cfg, card):
     """The override is drawn after everything else: non-low ON rows equal a plain uniform draw."""
     on = draw_transistor_samples("nmos_on", 500, dev_cfg, card, make_rng(3, "same"))
     off = draw_transistor_samples("nmos_off", 500, dev_cfg, card, make_rng(3, "same"))
-    keep = (on.vd - on.vs).abs() > LOW_VDS_RANGE[1]
+    keep = ((on.vd - on.vs).abs() > LOW_VDS_RANGE[1]) & ~_stack_pinned(on, "nmos")
     for col in ("vdd", "vs", "w", "temp", *PROCESS_PARAMS):
         assert np.array_equal(on.loc[keep, col], off.loc[keep, col]), col
     keep_vd = keep & ~_drain_pinned(off, "nmos")
@@ -131,7 +134,8 @@ def test_source_pinning_keeps_other_rows(dev_cfg, card):
     """Pinning is drawn after everything else: only vs of the pinned rows changes."""
     ref = draw_transistor_samples("nmos_on", 500, dev_cfg, card, make_rng(4, "x"))
     off = draw_transistor_samples("nmos_off", 500, dev_cfg, card, make_rng(4, "x"))
-    same = (ref.vd - ref.vs).abs() > LOW_VDS_RANGE[1]  # ON rows the low-Vds draw left alone
+    # ON rows the low-Vds and stack draws left alone
+    same = ((ref.vd - ref.vs).abs() > LOW_VDS_RANGE[1]) & ~_stack_pinned(ref, "nmos")
     for col in ("vdd", "w", "temp", *PROCESS_PARAMS):
         assert np.array_equal(ref.loc[same, col], off.loc[same, col]), col
     same_vd = same & ~_drain_pinned(off, "nmos")
@@ -155,8 +159,29 @@ def test_off_drain_pinning(case, dev_cfg, card):
         assert ((df.vd >= 0) & (df.vd <= df.vdd)).all()
         full = ((df.vd - df.vs).abs() > 0.9 * df.vdd).mean()
         assert full > 0.8 * DRAIN_PIN_FRAC * SOURCE_PIN_FRAC  # the gate operating point is covered
-    else:  # ON: exact vd only comes from the low-|Vds| override (vd ~ vs), never a drain pin
-        assert (pinned & ((df.vd - df.vs).abs() > LOW_VDS_RANGE[1])).sum() == 0
+    else:  # ON: an exact vd at the far rail with large |vds| only comes from the stack pin
+        far = pinned & ((df.vd - df.vs).abs() > LOW_VDS_RANGE[1]).to_numpy()
+        assert np.array_equal(far, _stack_pinned(df, device))
+
+
+def _stack_pinned(df: pd.DataFrame, device: str) -> np.ndarray:
+    """ON rows at the stacked operating point: vd pinned to the far rail, vs exact in the band."""
+    exact_vs = np.array([float(format_number(v)) == v for v in df.vs])
+    big = ((df.vd - df.vs).abs() > LOW_VDS_RANGE[1]).to_numpy()
+    return _drain_pinned(df, device) & exact_vs & big
+
+
+@pytest.mark.parametrize("case", sorted(LOW_VDS_CASES))
+def test_on_stack_pinning(case, dev_cfg, card):
+    df = draw_transistor_samples(case, 4000, dev_cfg, card, make_rng(7, case.value))
+    device = CASE_DEVICE[case]
+    pinned = _stack_pinned(df, device)
+    # drawn only on rows outside the low-|Vds| set
+    assert pinned.mean() == pytest.approx(STACK_PIN_FRAC * (1 - LOW_VDS_FRAC), abs=0.03)
+    gap = (df.vdd - df.vs if device == "nmos" else df.vs) / df.vdd  # source from far rail
+    lo, hi = STACK_VS_BAND
+    assert gap[pinned].between(lo * 0.999, hi * 1.001).all()
+    assert ((df.vd >= 0) & (df.vd <= df.vdd) & (df.vs >= 0) & (df.vs <= df.vdd)).all()
 
 
 def _edge_dist(df: pd.DataFrame, cfg, card, device: str) -> pd.DataFrame:
