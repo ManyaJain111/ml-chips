@@ -1,0 +1,84 @@
+% ML-Based Leakage Current Estimation for Static CMOS -- course project report (D10).
+% Compiled on Overleaf (pdfLaTeX): upload report/overleaf.zip, see README.md.
+% Every number comes from generated/numbers.tex and generated/tab_*.tex (report/make_numbers.py).
+
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=2.5cm]{geometry}
+\usepackage[T1]{fontenc}   % proper glyphs for _ < > | in \texttt and generated text
+\usepackage{lmodern}
+\usepackage{amsmath}
+\usepackage{array}         % >{...}p{...} columns in tables
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{parskip}       % no paragraph indent, space between paragraphs
+\usepackage{xcolor}
+\usepackage{caption}
+\usepackage{siunitx}       % v3 (\qty) -- default on Overleaf
+\usepackage{hyperref}      % load last
+
+\graphicspath{{figures/}}
+\emergencystretch=2em
+\captionsetup{font=small, labelfont=bf}
+\sisetup{exponent-product = \times}
+\hypersetup{colorlinks=true, linkcolor=blue!50!black, urlcolor=blue!50!black,
+            citecolor=blue!50!black}
+
+% Placeholder for text still to be written (also used by generated/numbers.tex for
+% missing inputs). Search the PDF for "TODO" before submitting.
+\newcommand{\todo}[1]{\textcolor{red}{\textbf{[TODO: #1]}}}
+
+% Shrink a (generated) table to the text width only if it is wider; graphicx only.
+\newsavebox{\fitbox}
+\newcommand{\fittable}[1]{%
+  \sbox{\fitbox}{#1}%
+  \ifdim\wd\fitbox>\linewidth\resizebox{\linewidth}{!}{\usebox{\fitbox}}\else\usebox{\fitbox}\fi}
+
+\input{generated/numbers}
+
+
+\begin{document}
+\begin{center}
+  {\LARGE\bfseries ML-Based Leakage Current Estimation\\[3pt] for Static CMOS Logic\par}
+  \vspace{8pt}
+  {\large 32\,nm LP technology \quad\textbullet\quad 8-bit parity checker\par}
+  \vspace{14pt}
+  {\large Team \emph{Hot Hot Chips}\par}
+  \vspace{6pt}
+  \begin{tabular}{@{}c@{\hspace{2.5em}}c@{\hspace{2.5em}}c@{\hspace{2.5em}}c@{}}
+    Manya & Joanna & Sindhuja & Gopal
+  \end{tabular}
+\end{center}
+\vspace{6pt}
+
+\begin{abstract}
+We built a pipeline that estimates the static leakage of CMOS logic in a 32\,nm low-power technology
+(\VDDnom) under PVT variation from machine-learning models instead of full SPICE simulation. One
+model per transistor case (NMOS/PMOS, ON/OFF) predicts all four terminal currents; it is trained on
+\RowsPerCase{} ngspice simulations per case, oversampled at the bias points transistors actually
+see inside gates, and after comparing four model types the selected model is \ChosenSummary{} with
+linear leaves. Gate leakage is composed from these models, with the channel current of every ON
+transistor at near-zero $V_{DS}$ solved from Kirchhoff's current law, since predicting it directly
+failed badly. The \TestCircuit{} is predicted as a sum of gate results plus a loading term for the
+tunnelling current of driven inputs. Over 18 gate cases at \NumCorners{} PVT corners we reach a
+mean accuracy of \GateMeanAcc{} (median error \GateMedianErr; \FreshMeanAcc{} on fresh corners),
+and \CircuitMeanAcc{} on the test circuit over \CircuitNumSims{} vector--corner cases. A
+per-transistor SPICE oracle shows the composition itself is exact (\OracleMeanAcc), so the
+remaining gap to \qty{99}{\percent} is transistor-model error, mainly the source current of
+stacked OFF PMOS and the PMOS gate-tunnelling current.
+\end{abstract}
+
+
+\input{sections/01_setup}
+\input{sections/02_data}
+\input{sections/03_models}
+\input{sections/04_gates}
+\input{sections/05_circuit}
+\input{sections/06_error}
+\input{sections/07_limitations}
+
+\appendix
+\input{sections/08_appendix}
+
+\end{document}
