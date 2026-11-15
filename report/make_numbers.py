@@ -671,6 +671,19 @@ define("CircuitIinMedianErr", lambda: pct(circ_row("primary-input current")["med
        "circuit_results primary-input current row")  # fmt: skip
 
 
+def _circuit_scope(raw: str) -> str:
+    """Short row labels so the table fits the text width."""
+    t = raw.strip()
+    if t.startswith("ones ="):
+        return rf"\quad {t.split('=')[1].strip()} ones"
+    for key, label in (("(all vectors)", "all vectors"), ("no loading", "without loading term"),
+                       ("primary-input", r"primary-input current $I_{in}$"),
+                       ("gate level", "gate level (all gates)")):  # fmt: skip
+        if key in t:
+            return label
+    return tex_escape(t)
+
+
 def _circuit_table() -> str:
     d = need(cr, "scope", "n", "spice_median", "ml_median", "bias_pct", "median_err_pct",
              "p95_err_pct", "max_err_pct", "mean_acc_pct")  # fmt: skip
@@ -678,11 +691,7 @@ def _circuit_table() -> str:
     extra = d[d["scope"].str.contains("no loading|primary-input|gate level", regex=True)]
     rows = []
     for r in pd.concat([main, extra]).itertuples():
-        scope = (
-            rf"{r.scope.split('=')[1].strip()} ones in the input vector"
-            if r.scope.strip().startswith("ones =")
-            else tex_escape(r.scope.strip())
-        )
+        scope = _circuit_scope(r.scope)
         rows.append([scope, count(r.n), sci(r.spice_median, 3), sci(r.ml_median, 3),
                      pct(r.bias_pct, 2, plus=True), pct(r.median_err_pct, 2),
                      pct(r.p95_err_pct, 2), pct(r.max_err_pct, 1), pct(r.mean_acc_pct, 2)])  # fmt: skip

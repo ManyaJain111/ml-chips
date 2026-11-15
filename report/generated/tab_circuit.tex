@@ -3,20 +3,20 @@
 \toprule
 Scope & $n$ & SPICE median (A) & ML median (A) & Bias & Median err. & p95 err. & Max err. & Mean acc. \\
 \midrule
-parity8 (all vectors) & \num{51200} & \num{8.04e-10} & \num{8.22e-10} & \qty[retain-explicit-plus]{+0.92}{\percent} & \qty{1.42}{\percent} & \qty{4.73}{\percent} & \qty{6.8}{\percent} & \qty{98.16}{\percent} \\
+all vectors & \num{51200} & \num{8.04e-10} & \num{8.22e-10} & \qty[retain-explicit-plus]{+0.92}{\percent} & \qty{1.42}{\percent} & \qty{4.73}{\percent} & \qty{6.8}{\percent} & \qty{98.16}{\percent} \\
 \midrule
-0 ones in the input vector & \num{200} & \num{9.00e-10} & \num{9.15e-10} & \qty[retain-explicit-plus]{+0.46}{\percent} & \qty{1.38}{\percent} & \qty{4.42}{\percent} & \qty{6.3}{\percent} & \qty{98.22}{\percent} \\
-1 ones in the input vector & \num{1600} & \num{8.77e-10} & \num{8.83e-10} & \qty[retain-explicit-plus]{+0.62}{\percent} & \qty{1.36}{\percent} & \qty{4.47}{\percent} & \qty{6.4}{\percent} & \qty{98.23}{\percent} \\
-2 ones in the input vector & \num{5600} & \num{8.63e-10} & \num{8.73e-10} & \qty[retain-explicit-plus]{+0.79}{\percent} & \qty{1.40}{\percent} & \qty{4.51}{\percent} & \qty{6.5}{\percent} & \qty{98.21}{\percent} \\
-3 ones in the input vector & \num{11200} & \num{8.34e-10} & \num{8.49e-10} & \qty[retain-explicit-plus]{+0.85}{\percent} & \qty{1.43}{\percent} & \qty{4.58}{\percent} & \qty{6.6}{\percent} & \qty{98.18}{\percent} \\
-4 ones in the input vector & \num{14000} & \num{8.05e-10} & \num{8.29e-10} & \qty[retain-explicit-plus]{+0.91}{\percent} & \qty{1.41}{\percent} & \qty{4.74}{\percent} & \qty{6.7}{\percent} & \qty{98.16}{\percent} \\
-5 ones in the input vector & \num{11200} & \num{7.77e-10} & \num{7.99e-10} & \qty[retain-explicit-plus]{+0.95}{\percent} & \qty{1.43}{\percent} & \qty{4.77}{\percent} & \qty{6.7}{\percent} & \qty{98.13}{\percent} \\
-6 ones in the input vector & \num{5600} & \num{7.78e-10} & \num{7.86e-10} & \qty[retain-explicit-plus]{+0.99}{\percent} & \qty{1.45}{\percent} & \qty{4.80}{\percent} & \qty{6.8}{\percent} & \qty{98.10}{\percent} \\
-7 ones in the input vector & \num{1600} & \num{7.61e-10} & \num{7.76e-10} & \qty[retain-explicit-plus]{+1.03}{\percent} & \qty{1.49}{\percent} & \qty{4.87}{\percent} & \qty{6.7}{\percent} & \qty{98.10}{\percent} \\
-8 ones in the input vector & \num{200} & \num{7.90e-10} & \num{7.90e-10} & \qty[retain-explicit-plus]{+1.05}{\percent} & \qty{1.42}{\percent} & \qty{4.78}{\percent} & \qty{6.7}{\percent} & \qty{98.11}{\percent} \\
+\quad 0 ones & \num{200} & \num{9.00e-10} & \num{9.15e-10} & \qty[retain-explicit-plus]{+0.46}{\percent} & \qty{1.38}{\percent} & \qty{4.42}{\percent} & \qty{6.3}{\percent} & \qty{98.22}{\percent} \\
+\quad 1 ones & \num{1600} & \num{8.77e-10} & \num{8.83e-10} & \qty[retain-explicit-plus]{+0.62}{\percent} & \qty{1.36}{\percent} & \qty{4.47}{\percent} & \qty{6.4}{\percent} & \qty{98.23}{\percent} \\
+\quad 2 ones & \num{5600} & \num{8.63e-10} & \num{8.73e-10} & \qty[retain-explicit-plus]{+0.79}{\percent} & \qty{1.40}{\percent} & \qty{4.51}{\percent} & \qty{6.5}{\percent} & \qty{98.21}{\percent} \\
+\quad 3 ones & \num{11200} & \num{8.34e-10} & \num{8.49e-10} & \qty[retain-explicit-plus]{+0.85}{\percent} & \qty{1.43}{\percent} & \qty{4.58}{\percent} & \qty{6.6}{\percent} & \qty{98.18}{\percent} \\
+\quad 4 ones & \num{14000} & \num{8.05e-10} & \num{8.29e-10} & \qty[retain-explicit-plus]{+0.91}{\percent} & \qty{1.41}{\percent} & \qty{4.74}{\percent} & \qty{6.7}{\percent} & \qty{98.16}{\percent} \\
+\quad 5 ones & \num{11200} & \num{7.77e-10} & \num{7.99e-10} & \qty[retain-explicit-plus]{+0.95}{\percent} & \qty{1.43}{\percent} & \qty{4.77}{\percent} & \qty{6.7}{\percent} & \qty{98.13}{\percent} \\
+\quad 6 ones & \num{5600} & \num{7.78e-10} & \num{7.86e-10} & \qty[retain-explicit-plus]{+0.99}{\percent} & \qty{1.45}{\percent} & \qty{4.80}{\percent} & \qty{6.8}{\percent} & \qty{98.10}{\percent} \\
+\quad 7 ones & \num{1600} & \num{7.61e-10} & \num{7.76e-10} & \qty[retain-explicit-plus]{+1.03}{\percent} & \qty{1.49}{\percent} & \qty{4.87}{\percent} & \qty{6.7}{\percent} & \qty{98.10}{\percent} \\
+\quad 8 ones & \num{200} & \num{7.90e-10} & \num{7.90e-10} & \qty[retain-explicit-plus]{+1.05}{\percent} & \qty{1.42}{\percent} & \qty{4.78}{\percent} & \qty{6.7}{\percent} & \qty{98.11}{\percent} \\
 \midrule
-no loading term (sum of gate i\_vdd) & \num{51200} & \num{8.04e-10} & \num{4.87e-10} & \qty[retain-explicit-plus]{-26.54}{\percent} & \qty{26.54}{\percent} & \qty{81.45}{\percent} & \qty{95.9}{\percent} & \qty{66.02}{\percent} \\
-primary-input current i\_in & \num{51200} & \num{3.43e-11} & \num{3.49e-11} & \qty[retain-explicit-plus]{-0.88}{\percent} & \qty{1.59}{\percent} & \qty{4.59}{\percent} & \qty{6.6}{\percent} & \qty{98.09}{\percent} \\
-gate level (ALL gates, Part B) & \num{3600} & \num{2.01e-11} & \num{2.05e-11} & \qty[retain-explicit-plus]{+1.04}{\percent} & \qty{1.82}{\percent} & \qty{6.20}{\percent} & \qty{26.4}{\percent} & \qty{97.61}{\percent} \\
+without loading term & \num{51200} & \num{8.04e-10} & \num{4.87e-10} & \qty[retain-explicit-plus]{-26.54}{\percent} & \qty{26.54}{\percent} & \qty{81.45}{\percent} & \qty{95.9}{\percent} & \qty{66.02}{\percent} \\
+primary-input current $I_{in}$ & \num{51200} & \num{3.43e-11} & \num{3.49e-11} & \qty[retain-explicit-plus]{-0.88}{\percent} & \qty{1.59}{\percent} & \qty{4.59}{\percent} & \qty{6.6}{\percent} & \qty{98.09}{\percent} \\
+gate level (all gates) & \num{3600} & \num{2.01e-11} & \num{2.05e-11} & \qty[retain-explicit-plus]{+1.04}{\percent} & \qty{1.82}{\percent} & \qty{6.20}{\percent} & \qty{26.4}{\percent} & \qty{97.61}{\percent} \\
 \bottomrule
 \end{tabular}

@@ -27,6 +27,12 @@
 % missing inputs). Search the PDF for "TODO" before submitting.
 \newcommand{\todo}[1]{\textcolor{red}{\textbf{[TODO: #1]}}}
 
+% Shrink a (generated) table to the text width only if it is wider; graphicx only.
+\newsavebox{\fitbox}
+\newcommand{\fittable}[1]{%
+  \sbox{\fitbox}{#1}%
+  \ifdim\wd\fitbox>\linewidth\resizebox{\linewidth}{!}{\usebox{\fitbox}}\else\usebox{\fitbox}\fi}
+
 \input{generated/numbers}
 
 \title{ML-Based Leakage Current Estimation for Static CMOS\\

@@ -93,7 +93,7 @@ the table.
   \caption{Model types, fixed hyperparameters and validation search grids (generated from
   \texttt{src/leakml/ml/zoo.py}).}
   \label{tab:hyper}
-  \input{generated/tab_hyper}
+  \fittable{\input{generated/tab_hyper}}
 \end{table}
 
 \paragraph{Linear leaves in the GBDT.}
@@ -117,7 +117,7 @@ improves as well, and the gate-level mean accuracy (Section~\ref{sec:gates}) ris
   currents, with constant leaves (commit \ConstLeafCommit) and with linear leaves (final). Last
   row: gate-level mean accuracy over all 18 gate cases.}
   \label{tab:linear}
-  \input{generated/tab_linear_leaves}
+  \fittable{\input{generated/tab_linear_leaves}}
 \end{table}
 
 \subsection{Metrics and selection}
@@ -146,7 +146,7 @@ The chosen model is \ChosenSummary{}, with the grid point
   model type. Metrics are averaged over the currents that have a relative error (OFF-state
   $I_G$ is entirely below \IFloor). Bold: selected model (lowest p95).}
   \label{tab:models}
-  \input{generated/tab_models}
+  \fittable{\input{generated/tab_models}}
 \end{table}
 
 \begin{table}[H]
@@ -156,7 +156,7 @@ The chosen model is \ChosenSummary{}, with the grid point
   the median signed relative error; ``Excl.''\ counts rows below \IFloor, which are left out of
   the relative errors.}
   \label{tab:chosen}
-  \input{generated/tab_chosen}
+  \fittable{\input{generated/tab_chosen}}
 \end{table}
 
 \begin{figure}[H]
