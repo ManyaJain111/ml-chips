@@ -27,7 +27,8 @@ transistor-model error. The limitations we see, and what we would do next:
   \item \textbf{Loading term} assumes ideal input levels and splits $I_{in}$ evenly over a gate's
         high pins: exact for this NAND2-only circuit, an approximation for gates with asymmetric
         inputs. Next: predict $I_{in}$ per pin.
-  \item \textbf{Data size and grid edge.} The learning curve still falls at \LCMaxSize{} rows, and
+  \item \textbf{Data size and grid edge.} The learning curve falls more slowly beyond \num{14000} rows
+        but has not levelled off at \LCMaxSize{}, and
         all chosen GBDTs use the largest leaf count in the grid; more data and a larger grid may
         still help.
 \end{itemize}

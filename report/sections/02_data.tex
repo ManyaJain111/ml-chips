@@ -70,8 +70,8 @@ nested subsets of the training split, scored on fixed validation rows) showed th
 falling clearly at \num{7000} training rows: the \texttt{nmos\_off} $I_D$ median error drops from
 \LCMedian{nmos_off}{id}{7000} at \num{7000} rows to \LCMedian{nmos_off}{id}{21000} at
 \LCMaxSize{}, and the \texttt{nmos\_on} $I_G$ error from \LCMedian{nmos_on}{ig}{7000} to
-\LCMedian{nmos_on}{ig}{21000} (Figure~\ref{fig:lc}). The curve flattens beyond \num{14000} rows,
-so \RowsPerCase{} is a reasonable trade-off against SPICE and training cost.
+\LCMedian{nmos_on}{ig}{21000} (Figure~\ref{fig:lc}). The curve falls more slowly beyond \num{14000} rows
+but has not levelled off, so \RowsPerCase{} is a reasonable trade-off against SPICE and training cost.
 
 Each dataset is split \SplitScheme{} (seed \SeedSplit) into \NTrain{} training, \NVal{}
 validation and \NTest{} test rows; split indices are saved. Every row is one ngspice deck with

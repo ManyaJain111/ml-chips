@@ -120,8 +120,8 @@ from sampling the right operating points; the model change that mattered was the
 \begin{table}[H]
   \centering
   \small
-  \caption{Development of the gate-level accuracy (18 cases, \NumCorners{} corners). Rows 1--3
-  and 5: earlier runs as recorded; rows 4 and 6: generated.}
+  \caption{Development of the gate-level accuracy (18 cases, \NumCorners{} corners). Rows 1--3:
+  earlier runs as recorded; rows 4--6: from the result files of each run.}
   \label{tab:history}
   \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.52\linewidth}lrr@{}}
     \toprule
@@ -132,7 +132,7 @@ from sampling the right operating points; the model change that mattered was the
     3.\ + KCL composition & KCL & \qty{7.0}{\percent} & \qty{91.5}{\percent} \\
     4.\ \RowsPerCase{} rows, source and drain pinning, constant leaves & KCL &
         \ConstLeafGateMedianErr & \ConstLeafGateMeanAcc \\
-    5.\ + linear-leaf GBDT & KCL & -- & \qty{97.6}{\percent} \\
+    5.\ + linear-leaf GBDT & KCL & \qty{1.82}{\percent} & \qty{97.61}{\percent} \\
     6.\ final: + ON stack pinning & KCL & \GateMedianErr & \GateMeanAcc \\
     \bottomrule
   \end{tabular}

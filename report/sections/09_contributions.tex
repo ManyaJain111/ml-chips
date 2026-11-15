@@ -1,0 +1,51 @@
+% Individual contributions, following the work split agreed at the start of the project.
+
+\clearpage
+\section{Individual contributions}\label{sec:contributions}
+
+The work was split by pipeline stage, one owner per part of the brief, with every pull request
+reviewed by a second team member (Table~\ref{tab:contrib}).
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{Work split. Code paths are relative to \texttt{src/leakml/} and \texttt{scripts/}.}
+  \label{tab:contrib}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.2\linewidth}
+                  >{\raggedright\arraybackslash}p{0.5\linewidth}
+                  >{\raggedright\arraybackslash}p{0.22\linewidth}@{}}
+    \toprule
+    Member & Responsibility & Deliverables \\
+    \midrule
+    Manya Jain \newline 2024102068 &
+      Transistor data and data checks (Part A.1): model-card parsing, sampling and
+      oversampling, single-transistor SPICE decks and runner, dataset generation, Kirchhoff
+      check and trend plots, learning curve; scripts 01--03, 05b. &
+      D1, D2 (transistor decks), D3 \\
+    \addlinespace
+    Allu Joanna Preetika \newline 2024112008 &
+      ML transistor models (Part A.2): features, target transform, the four model types and
+      their grids, training, validation-based selection, test evaluation and the saved
+      model bank, metrics, learning curve; scripts 04--05. &
+      D4, D5, learning curve (Part A.1 dataset size) \\
+    \addlinespace
+    Sindhuja Babu \newline 2024102055 &
+      Gate-level validation (Part B): gate SPICE decks and reference, PVT corners, gate
+      leakage from the transistor models with the KCL composition, gate results, parity plot
+      and worst cases; scripts 06--09. &
+      D2 (gate decks), D6, D7 \\
+    \addlinespace
+    Gopal Kataria \newline 2023112006 &
+      Test circuit (Part C) and integration: 8-bit parity checker definition, logic
+      simulation, circuit SPICE reference, hierarchical ML prediction with the loading
+      term, circuit report; configuration, environment check, Makefile and full pipeline
+      runs; scripts 00, 10--12. &
+      D2 (circuit deck), D8, D9 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The report (D10) is a joint deliverable: each member wrote the sections for their own part (data generation, transistor models,
+gate results, test-circuit results, and the matching parts of the error analysis), and the
+limitations were collected from all four. Shared code (constants, CSV input/output, command-line
+helpers and the specification) was changed only by agreement.

@@ -13,7 +13,7 @@ uv run python report/make_numbers.py      # 2. analysis, numbers, tables, figure
 
 3. On Overleaf: **New Project → Upload Project** and choose `report/overleaf.zip`
    (or, in an existing project, upload the files from the zip to overwrite `generated/` and
-   `figures/`). Compiler: pdfLaTeX. Main document: `main.tex`.
+   `figures/`). Compiler: pdfLaTeX. Main document: `HotHotChips_2024112008_2024102068_2023112006_2024102055.tex`.
 
 `make_numbers.py` prints a `MISSING` list if a source file or column is absent (otherwise
 "nothing missing"). The affected macro or table then shows a red `[TODO: missing: ...]` in the PDF
@@ -26,17 +26,17 @@ back into the repo before the next upload, because the zip is always built from 
 
 | Path | Content |
 |---|---|
-| `main.tex` | Preamble, title, abstract, `\input` of the sections in the brief's order |
+| `HotHotChips_2024112008_2024102068_2023112006_2024102055.tex` | Main document: preamble, title page, abstract, `\input` of the sections in the brief's order |
 | `sections/01_setup.tex` ... `08_appendix.tex` | One file per report section (brief §6, item 10) |
-| `sections/p2_transistor.tex` | Joanna's draft of the transistor-model text, source for `03_models` / `06_error` / `07_limitations` (not `\input` directly) |
+| `sections/09_contributions.tex` | Individual contributions (last section) |
 | `generated/numbers.tex` | One `\newcommand` per quoted number (generated, committed) |
 | `generated/tab_*.tex` | Booktabs `tabular`s only (no caption/label): `kirchhoff` (D3), `models` (D4, per case), `models_full` (D4, per current), `chosen` (D5), `learning` (learning curve), `gates` (D6), `gate_worst`, `circuit` (D8) |
 | `figures/*.pdf` | Copies of the `results/plots/*.pdf` the report uses (generated, committed) |
-| `overleaf.zip` | `main.tex` + `sections/` + `generated/` + `figures/` (generated, not committed) |
+| `overleaf.zip` | Main `.tex` + `sections/` + `generated/` + `figures/` (generated, not committed) |
 | `make_numbers.py` | The generator |
 | `make_analysis.py` | Section 6 error analysis (called by `make_numbers.py`); writes `generated/analysis/` (CSVs + `error_vs_corner.pdf`, not in the zip) |
 | `analysis/` | One-off validation studies (SPICE oracle, fresh corners) with their scripts and summaries; see `analysis/README.md` |
-| `report.md` | The original outline (kept for reference) |
+| `HotHotChips_2024112008_2024102068_2023112006_2024102055.pdf` | The final compiled report (D10), built from the main `.tex` of the same name |
 
 ## Using the numbers
 

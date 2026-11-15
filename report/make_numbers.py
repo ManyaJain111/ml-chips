@@ -1626,7 +1626,12 @@ for fig in ("error_vs_corner",):
         missing.append(f"figure report/generated/analysis/{fig}.pdf (make_analysis.py)")
 
 # ================================================================== Overleaf zip
-ZIP_CONTENT = ["main.tex", "sections", "generated", "figures"]
+ZIP_CONTENT = [
+    "HotHotChips_2024112008_2024102068_2023112006_2024102055.tex",
+    "sections",
+    "generated",
+    "figures",
+]
 ZIP.unlink(missing_ok=True)
 with zipfile.ZipFile(ZIP, "w", zipfile.ZIP_DEFLATED) as zf:
     for item in ZIP_CONTENT:

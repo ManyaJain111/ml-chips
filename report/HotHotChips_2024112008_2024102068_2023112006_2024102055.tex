@@ -39,26 +39,36 @@
 
 
 \begin{document}
-\begin{center}
-  {\LARGE\bfseries ML-Based Leakage Current Estimation\\[3pt] for Static CMOS Logic\par}
-  \vspace{8pt}
-  {\large 32\,nm LP technology \quad\textbullet\quad 8-bit parity checker\par}
-  \vspace{14pt}
-  {\large Team \emph{Hot Hot Chips}\par}
-  \vspace{6pt}
-  \begin{tabular}{@{}c@{\hspace{2.5em}}c@{\hspace{2.5em}}c@{\hspace{2.5em}}c@{}}
-    Manya & Joanna & Sindhuja & Gopal
-  \end{tabular}
-\end{center}
-\vspace{6pt}
+\begin{titlepage}
+  \centering
+  \vspace*{0.22\textheight}
+  {\huge\bfseries ML-Based Leakage Current Estimation\\[8pt] for Static CMOS Logic\par}
+  \vspace{18pt}
+  {\Large 32\,nm LP technology \quad\textbullet\quad 8-bit parity checker\par}
+  \vspace{0.08\textheight}
+  {\Large Team \emph{Hot Hot Chips}\par}
+  \vspace{18pt}
+  {\large
+  \begin{tabular}{@{}c@{\hspace{4em}}c@{}}
+    Allu Joanna Preetika & Manya Jain \\
+    2024112008 & 2024102068 \\[14pt]
+    Gopal Kataria & Sindhuja Babu \\
+    2023112006 & 2024102055
+  \end{tabular}\par}
+  \vfill
+  {\large Code and results:\par}
+  \vspace{4pt}
+  {\large\href{https://github.com/ManyaJain111/ml-chips}{\texttt{https://github.com/ManyaJain111/ml-chips}}\par}
+  \vspace*{0.06\textheight}
+\end{titlepage}
 
 \begin{abstract}
 We built a pipeline that estimates the static leakage of CMOS logic in a 32\,nm low-power technology
 (\VDDnom) under PVT variation from machine-learning models instead of full SPICE simulation. One
 model per transistor case (NMOS/PMOS, ON/OFF) predicts all four terminal currents; it is trained on
 \RowsPerCase{} ngspice simulations per case, oversampled at the bias points transistors actually
-see inside gates, and after comparing four model types the selected model is \ChosenSummary{} with
-linear leaves. Gate leakage is composed from these models, with the channel current of every ON
+see inside gates, and after comparing four model types the selected model in all four cases is a
+gradient-boosted tree ensemble (GBDT) with linear leaves. Gate leakage is composed from these models, with the channel current of every ON
 transistor at near-zero $V_{DS}$ solved from Kirchhoff's current law, since predicting it directly
 failed badly. The \TestCircuit{} is predicted as a sum of gate results plus a loading term for the
 tunnelling current of driven inputs. Over 18 gate cases at \NumCorners{} PVT corners we reach a
@@ -80,5 +90,6 @@ stacked OFF PMOS and the PMOS gate-tunnelling current.
 
 \appendix
 \input{sections/08_appendix}
+\input{sections/09_contributions}
 
 \end{document}
