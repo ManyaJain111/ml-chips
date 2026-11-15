@@ -1,81 +1,32 @@
-% Limitations and improvements
+% Limitations
 \section{Limitations and improvements}\label{sec:limitations}
 
-\paragraph{Final accuracy against the target.}
-The brief sets a target of up to \qty{99}{\percent} mean accuracy. We reach \GateMeanAcc{} at gate
-level, \FreshMeanAcc{} on fresh corners, and \CircuitMeanAcc{} on the test circuit, so the target
-is not met, by about one to two percentage points. The analysis of Section~\ref{sec:error} locates
-the gap precisely: the composition is exact (SPICE oracle \OracleMeanAcc, circuit composition from
-SPICE gate values \CompSpiceMeanAcc), so all of the remaining error comes from the transistor models,
-and the single largest contribution, \ErrorSourceFirst{}, would on its own raise the gate accuracy
-to \ErrorSourceFirstAcc{} if it were exact. The limitations below are grouped by part, each with
-the change we would make.
-
+We reach \GateMeanAcc{} at gate level (\FreshMeanAcc{} on fresh corners) and \CircuitMeanAcc{} on
+the test circuit, against a target of up to \qty{99}{\percent}. The composition is exact (oracle
+\OracleMeanAcc, circuit from SPICE gate values \CompSpiceMeanAcc), so the remaining gap is entirely
+transistor-model error. The limitations we see, and what we would do next:
 \begin{itemize}
-  \item \textbf{Data and sampling}
-  \begin{itemize}
-    \item \emph{ON transistors at intermediate $|V_{DS}|$.} The sampling targets ON transistors at
-          $V_{DS}\approx 0$ and OFF transistors at the rails, but an ON NMOS whose source floats at
-          an internal node (the upper NMOS of NAND2~\texttt{10}, $x \approx
-          \VxOneZeroFrac\,V_{DD}$) sits at a substantial $|V_{DS}|$ near threshold and causes the
-          worst gate case. \emph{Improvement:} an ON-case analogue of source pinning, with the
-          source drawn near $V_{DD} - V_{th}$ (NMOS) or $V_{th}$ (PMOS) and the drain on the rail;
-          like the existing rules it follows from circuit physics, not from evaluation data.
-    \item \emph{Dataset size.} The learning curve (Figure~\ref{fig:lc}) still slopes down at
-          \LCMaxSize{} training rows. \emph{Improvement:} more rows, concentrated in the
-          oversampled regions where the error is largest.
-    \item \emph{Junction current floor.} The OFF currents sit on a constant floor of about
-          $10^{-14}$\,A at low temperature (Figure~\ref{fig:trends}), consistent with BSIM4's
-          default junction current when the netlist gives no junction areas, so junction leakage
-          does not scale with $W$. \emph{Improvement:} give every transistor \texttt{AS}/\texttt{AD}
-          and \texttt{PS}/\texttt{PD} from its width in all decks.
-  \end{itemize}
-  \item \textbf{Transistor models}
-  \begin{itemize}
-    \item \emph{PMOS gate tunnelling.} The largest error source at gate level is the ON PMOS gate
-          current (Table~\ref{tab:errorsources}), whose error depends on the oxide thickness and
-          does not average out over a corner. \emph{Improvement:} a dedicated model for $I_G$ with
-          the physical $\exp(-\alpha\, t_{ox})$ dependence built into the features or the target.
-    \item \emph{Accuracy floor at tiny currents.} Currents that cross zero (ON $I_D$, $I_S$) or are
-          close to the \IFloor{} floor (OFF $I_S$) have unbounded relative error, and below about
-          $10^{-14}$\,A even the SPICE reference is only good to a per cent or two
-          (\SpiceFloorRel{} of the smallest gate leakage). \emph{Improvement:} train on the
-          quantities that enter $I_{VDD}$ (the supply-side terminal currents) with a loss weighted
-          by their share of the gate leakage, instead of on each terminal current separately.
-    \item \emph{Grid edge and model size.} All four chosen GBDTs use the largest number of leaves
-          in the grid (\ChosenHyperNmosOff), so larger trees may still help, and the linear-leaf
-          models are large files. \emph{Improvement:} extend the grid, then prune or distil the
-          final models.
-  \end{itemize}
-  \item \textbf{Gates}
-  \begin{itemize}
-    \item \emph{SPICE node voltages are still required.} As the brief prescribes, the gate
-          prediction reads the internal and output node voltages from SPICE, so it is not yet a
-          SPICE-free leakage estimator; the optional ML node solve was not implemented.
-          \emph{Improvement:} solve KCL at the internal nodes with the ML currents (a 1-D root
-          search per node, coupled for AND2/OR2) and compare the solved voltages with SPICE.
-    \item \emph{Heuristic KCL threshold.} ON transistors below \KclVdsMax{} get their channel
-          current from KCL. This works because the gap is wide (in-gate values at most \OnVdsMax,
-          the smallest genuinely biased ON transistor at \OnBiasedVdsMin), but a gate with an
-          intermediate $|V_{DS}|$ would fall between the two regimes. \emph{Improvement:} solve the
-          channel currents of all ON transistors consistently with the node voltages, which the
-          ML node solve above would provide.
-    \item \emph{Ideal gate voltages.} The models only know $V_G\in\{0, V_{DD}\}$; the AND2/OR2
-          inverter input is snapped (at most \GateSnapMax{} here). In circuits with degraded logic
-          levels this would no longer be negligible. \emph{Improvement:} sample $V_G$ in a narrow
-          band around each rail.
-  \end{itemize}
-  \item \textbf{Test circuit}
-  \begin{itemize}
-    \item \emph{Loading term.} The loading term assumes ideal $0$/$V_{DD}$ gate inputs and splits a
-          gate's $I_{in}$ evenly over its high pins. For the NAND2-only parity checker this is
-          essentially exact (\CompSpiceMeanAcc{} with SPICE gate values), but for gates with
-          asymmetric inputs, such as the AND2/OR2 first stage, the even split is an approximation.
-          \emph{Improvement:} predict $I_{in}$ per input pin in the gate model.
-    \item \emph{Systematic error accumulates.} Corner-dependent model errors are common to all
-          gates of a corner and add up in the circuit (Section~\ref{sec:errcircuit}), so the
-          circuit accuracy is bounded by the systematic part of the gate error. \emph{Improvement:}
-          the transistor-model improvements above; a larger circuit would not average this error
-          away.
-  \end{itemize}
+  \item \textbf{PMOS gate tunnelling} is the largest gate-level error source and is systematic
+        over a corner, so it does not average out in the circuit. Next: build the physical
+        $\exp(-\alpha\,t_{ox})$ dependence into a dedicated $I_G$ model.
+  \item \textbf{SPICE node voltages are still required.} As the brief prescribes, the gate
+        prediction reads internal node voltages from SPICE, so it is not yet SPICE-free. Next:
+        solve KCL at the internal nodes with the ML currents and compare with SPICE.
+  \item \textbf{The \KclVdsMax{} KCL threshold is a heuristic.} It works because of a wide gap
+        (in-gate ON values at most \OnVdsMax, biased ON transistors from \OnBiasedVdsMin), but an
+        intermediate case would fall between regimes. A node-voltage solve would remove it.
+  \item \textbf{Ideal gate voltages.} The models only know $V_G\in\{0,V_{DD}\}$; with degraded
+        logic levels the snap would no longer be negligible. Next: sample $V_G$ near each rail.
+  \item \textbf{Tiny currents.} Zero-crossing ON currents and OFF $I_S$ near \IFloor{} have large
+        relative errors, and below about $10^{-14}$\,A even SPICE is only good to a per cent or
+        two. Next: train on the supply-side currents with a loss weighted by their share of the
+        gate leakage.
+  \item \textbf{Junction areas.} The decks give no \texttt{AS}/\texttt{AD}, so junction leakage
+        sits on a $W$-independent floor. Next: set junction areas from $W$ in every deck.
+  \item \textbf{Loading term} assumes ideal input levels and splits $I_{in}$ evenly over a gate's
+        high pins: exact for this NAND2-only circuit, an approximation for gates with asymmetric
+        inputs. Next: predict $I_{in}$ per pin.
+  \item \textbf{Data size and grid edge.} The learning curve still falls at \LCMaxSize{} rows, and
+        all chosen GBDTs use the largest leaf count in the grid; more data and a larger grid may
+        still help.
 \end{itemize}

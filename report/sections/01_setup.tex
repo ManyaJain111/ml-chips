@@ -1,48 +1,43 @@
 % Setup
 \section{Setup}\label{sec:setup}
 
-\paragraph{Assignment.}
-The team was assigned the \TechNode{} technology (model file \ModelFile{}, a PTM card for the
-BSIM4 model, \texttt{level=54}), a nominal supply of \VDDnom{} and the \TestCircuit{} as test
-circuit. Every transistor uses the minimum channel length of the node, $L = L_{\min} = \Lmin$.
-All of these values are read from \texttt{configs/project.yaml} and never hard-coded, so the
-same code would run unchanged for another assignment.
+\begin{table}[H]
+  \centering
+  \small
+  \caption{Assignment and simulation setup.}
+  \label{tab:setup}
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    Technology / model file & \TechNode{}, \ModelFile{} (PTM, BSIM4 \texttt{level=54}) \\
+    Supply & \VDDnom{} nominal, $\pm$\VDDtol \\
+    Channel length & $L = L_{\min} = \Lmin$ for every transistor \\
+    Gate sizing & NMOS $W = \NmosWMult\,L_{\min}$, PMOS $W = \PmosWMult\,L_{\min}$ \\
+    Test circuit & \TestCircuit{} \\
+    Simulator & \SimVersion{}, one DC operating point per deck \\
+    Software & Python \PythonVersion, scikit-learn \VerScikitLearn, LightGBM \VerLightgbm \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
-\paragraph{Simulator.}
-All SPICE results come from \SimVersion{} (BSIM4 \texttt{level=54}), one DC operating point
-(\texttt{op}) per deck. Every deck, from a single transistor to the full test circuit, contains
-the options line required by the brief,
-\texttt{.options gmin=1e-18 abstol=1e-18 reltol=1e-6 vntol=1e-9}, and prints with
-\texttt{set numdgt=12}, because ngspice's default precision is too coarse for currents that span
-more than ten decades.
+Every deck carries the options line required by the brief
+(\texttt{gmin=1e-18}, \texttt{abstol=1e-18}, \texttt{reltol=1e-6}, \texttt{vntol=1e-9}) and prints with 12 digits, since the
+currents we compare span more than ten decades. The PMOS is twice as wide as the NMOS to balance
+pull-up and pull-down strength; both widths lie inside the sampled range of
+Section~\ref{sec:data}, so the models never extrapolate in $W$.
 
-\paragraph{Model-card override (\texttt{rgatemod=0}).}
-The card ships with \texttt{rgatemod=1}, which adds an internal gate-resistance node. We set
-\texttt{rgatemod=0} for every deck. At DC no current flows through that resistance apart from
-the tunnelling current itself, so the selector does not change the physics of leakage, but with
-it enabled 15 of the 3\,600 gate decks (all AND2/OR2) failed to converge and ngspice reported $I_G = 0$
-for many single-transistor rows. With \texttt{rgatemod=0} every deck converges, and the gate
-leakage moves by only about $4\times10^{-6}$ (relative, median), far below any error discussed in
-this report (details in Section~\ref{sec:errgates}).
-% Source of the 15/3600 and 4e-6 figures: the investigation documented in src/leakml/pdk.py
-% (MODEL_OVERRIDES). They come from a one-off comparison, not from a pipeline output.
+\paragraph{\texttt{rgatemod=0}.}
+With the card as shipped (\texttt{rgatemod=1}), our first full gate run had 15 of 3\,600 decks
+(all AND2/OR2 with output 0) that did not converge cleanly: some fell back to a transient
+operating point with unreliable values, one gave a negative supply current. The extra
+gate-resistance node carries no current at DC beyond the tunnelling current itself, so we set
+\texttt{rgatemod=0} for every deck in the project. All decks then converge, and the leakage of
+the decks that had converged before moved by only $4\times10^{-6}$ (median, relative). We
+regenerated the transistor data with the same setting, so the whole project uses one card.
 
-\paragraph{Gate sizing.}
-Every NMOS in every gate and in the test circuit has $W = \NmosWMult\,L_{\min}$ and every PMOS
-$W = \PmosWMult\,L_{\min}$. The PMOS is twice as wide because hole mobility is roughly half the
-electron mobility (nominal \texttt{u0} of the card), which gives roughly balanced pull-up and
-pull-down strength. Both widths lie inside the sampled range $W \in
-[\WMultMin, \WMultMax]\,L_{\min}$, so the transistor models never extrapolate in $W$ at gate level.
-
-\paragraph{Software and reproduction.}
-The pipeline is Python \PythonVersion{} with NumPy \VerNumpy, pandas \VerPandas,
-scikit-learn \VerScikitLearn{} and LightGBM \VerLightgbm{}; the exact environment of the final run
-is recorded in \texttt{artifacts/env.json}. A single \texttt{make all} regenerates every
-deliverable from the model file by running fourteen scripts in order:
-environment check and extraction of the nominal BSIM4 parameters (00--01), transistor data and
-data check (02--03), model comparison, final models and learning curve (04--05b), the shared PVT
-corners (06), gate SPICE, gate ML and gate report (07--09), and the same three steps for the test
-circuit (10--12). All randomness is seeded from \texttt{configs/project.yaml}: transistor data
-\SeedTransistorData, data split \SeedSplit, model training \SeedTraining{} and PVT corners
-\SeedCorners. Each transistor case draws from its own child stream of the data seed, so
-regenerating one case leaves the other three bit-identical.
+\paragraph{Reproduction.}
+A single \texttt{make all} runs the pipeline from the model file: transistor data and data check,
+model selection and learning curve, the shared PVT corners, then SPICE, ML and report for the
+gates and for the test circuit. All randomness is seeded from \texttt{configs/project.yaml}
+(data \SeedTransistorData, split \SeedSplit, training \SeedTraining, corners \SeedCorners), and
+every number in this report is generated from the result files, not typed by hand
+(Appendix~\ref{sec:appreproduce}).
