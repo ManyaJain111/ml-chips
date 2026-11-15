@@ -104,8 +104,14 @@ rail (NMOS: 0, PMOS: vdd, i.e. at its body) and the drain up to the other rail; 
 see a small source offset. Uniform vd, vs put fewer than 1 % of rows near that point. In
 `nmos_off` and `pmos_off`, a random 40 % of rows (`sampling.SOURCE_PIN_FRAC`) instead get
 `vs` = rail ± offset, offset log-uniform in [1e-9, 1e-1] V (`SOURCE_PIN_RANGE`), towards the inside
-of [0, vdd], rounded to the deck's 10 significant digits; `vd` stays uniform. Drawn after all
-others, so the other rows and the ON cases are unchanged.
+of [0, vdd], rounded to the deck's 10 significant digits. Drawn after all others, so the other
+rows and the ON cases are unchanged.
+
+**Drain pinning (OFF cases only).** The OFF FET that sets a gate's leakage also has its drain on
+the other rail (|vds| ≈ VDD). With only the source pinned, ~4 % of OFF rows were there, and they
+had the largest validation error. An independent 50 % of OFF rows (`sampling.DRAIN_PIN_FRAC`) get
+`vd` = other rail ∓ offset (same offset law), so ~20 % of OFF rows sit at the full-VDD point.
+Drawn last.
 
 **Boundary oversampling (all cases).** Tree models are least accurate near the edges of the sampled
 box (on the 10k data, OFF-case validation p95 ≈ 58 % for rows within 5 % of an edge vs ≈ 45 %
@@ -171,7 +177,9 @@ n rows. The failure count is logged.
 ### 4.5 Models (Deliverables 4, 5)
 * Split: shuffle with `seeds.split`, 70/15/15 (or 80/10/10). The indices are saved to `artifacts/splits/`.
 * **Four model types**, compared on **validation**, defaults in `ml/zoo.py`: polynomial ridge,
-  random forest, gradient-boosted trees (LightGBM), MLP.
+  random forest, gradient-boosted trees (LightGBM), MLP. The LightGBM trees use linear leaves
+  (`linear_tree`): log-current is close to linear in the physics features, and constant leaves
+  left a few-% staircase error (validation median OFF `id` 4.3 % → 1.1 %, ON `ig` 7.4 % → 2.5 %).
 * Targets: currents span ~10 decades and change sign, so regress in a transformed space
   (`log10|I|` + sign, or `asinh(I/I0)`). Features may include physics-derived terms (`vds`,
   `vgs`, `1/T`, `vgs/vT`, normalised process params). The fitted feature list and transform are
